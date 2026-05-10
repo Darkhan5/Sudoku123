@@ -1,0 +1,219 @@
+import { promises as fs } from "fs";
+import path from "path";
+import {
+  accuracyFor,
+  filterLeaderboard,
+  isLeaderboardScope,
+  rankLeaderboard,
+  scoreFor,
+  upsertLeaderboardEntry,
+  type LeaderboardRecord
+} from "../domain/leaderboard";
+import { getCountryCode } from "../domain/onboarding";
+
+export interface LeaderboardStore {
+  read(): Promise<LeaderboardRecord[]>;
+  write(entries: LeaderboardRecord[]): Promise<void>;
+}
+
+export interface LeaderboardHandlersConfig {
+  store: LeaderboardStore;
+  now?: () => Date;
+}
+
+interface SubmitPayload {
+  playerId?: unknown;
+  name?: unknown;
+  city?: unknown;
+  country?: unknown;
+  countryCode?: unknown;
+  avatarUrl?: unknown;
+  icon?: unknown;
+  date?: unknown;
+  time?: unknown;
+  mistakes?: unknown;
+  hintsUsed?: unknown;
+}
+
+const DATA_DIR = path.join(process.cwd(), ".data");
+const DATA_FILE = path.join(DATA_DIR, "leaderboard.json");
+
+function jsonResponse(payload: unknown, init?: ResponseInit): Response {
+  return new Response(JSON.stringify(payload), {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      ...init?.headers
+    }
+  });
+}
+
+function todayIso(now: Date): string {
+  return now.toISOString().split("T")[0];
+}
+
+function asString(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function asInteger(value: unknown): number | null {
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isInteger(parsed) ? parsed : null;
+}
+
+function parseSubmitPayload(payload: SubmitPayload, now: Date): LeaderboardRecord | null {
+  const playerId = asString(payload.playerId);
+  const name = asString(payload.name);
+  const city = asString(payload.city);
+  const country = asString(payload.country);
+  const explicitCountryCode = asString(payload.countryCode).toUpperCase();
+  const countryCode = explicitCountryCode || getCountryCode(country) || "";
+  const avatarUrl = asString(payload.avatarUrl);
+  const icon = asString(payload.icon) || "🧠";
+  const date = asString(payload.date);
+  const time = asInteger(payload.time);
+  const mistakes = asInteger(payload.mistakes);
+  const hintsUsed = asInteger(payload.hintsUsed);
+
+  if (!playerId || !name || !city || !country || !countryCode || !date || !time || time <= 0 || mistakes === null || mistakes < 0 || hintsUsed === null || hintsUsed < 0) {
+    return null;
+  }
+
+  const accuracy = accuracyFor(mistakes, hintsUsed);
+
+  return {
+    id: `${date}:${playerId}`,
+    playerId,
+    name,
+    city,
+    country,
+    countryCode,
+    avatarUrl,
+    icon,
+    date,
+    time,
+    mistakes,
+    hintsUsed,
+    accuracy,
+    score: scoreFor(time, mistakes, hintsUsed),
+    createdAt: now.toISOString()
+  };
+}
+
+export function createFileLeaderboardStore(filePath = DATA_FILE): LeaderboardStore {
+  return {
+    async read() {
+      try {
+        const raw = await fs.readFile(filePath, "utf8");
+        const parsed = JSON.parse(raw) as LeaderboardRecord[];
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    },
+    async write(entries) {
+      await fs.mkdir(path.dirname(filePath), { recursive: true });
+      await fs.writeFile(filePath, JSON.stringify(entries, null, 2), "utf8");
+    }
+  };
+}
+
+export function createSupabaseLeaderboardStore(params: {
+  url: string;
+  serviceRoleKey: string;
+  table?: string;
+}): LeaderboardStore {
+  const table = params.table ?? "leaderboard_entries";
+  const endpoint = `${params.url.replace(/\/$/, "")}/rest/v1/${table}`;
+  const headers = {
+    apikey: params.serviceRoleKey,
+    Authorization: `Bearer ${params.serviceRoleKey}`,
+    "Content-Type": "application/json"
+  };
+
+  return {
+    async read() {
+      const response = await fetch(`${endpoint}?select=*&limit=5000`, {
+        headers,
+        cache: "no-store"
+      });
+      if (!response.ok) throw new Error("Could not read Supabase leaderboard.");
+      return (await response.json()) as LeaderboardRecord[];
+    },
+    async write(entries) {
+      if (entries.length === 0) return;
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          ...headers,
+          Prefer: "resolution=merge-duplicates"
+        },
+        body: JSON.stringify(entries)
+      });
+      if (!response.ok) throw new Error("Could not write Supabase leaderboard.");
+    }
+  };
+}
+
+export function createLeaderboardStoreFromEnv(): LeaderboardStore {
+  const url = process.env.SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (url && serviceRoleKey) {
+    return createSupabaseLeaderboardStore({ url, serviceRoleKey });
+  }
+  return createFileLeaderboardStore();
+}
+
+export function createLeaderboardHandlers({ store, now = () => new Date() }: LeaderboardHandlersConfig) {
+  return {
+    async GET(req: Request): Promise<Response> {
+      const url = new URL(req.url);
+      const tab = url.searchParams.get("tab") ?? "global";
+      if (!isLeaderboardScope(tab)) {
+        return jsonResponse({ error: "Unsupported leaderboard scope." }, { status: 400 });
+      }
+
+      const playerId = url.searchParams.get("playerId");
+      const entries = await store.read();
+      const ranked = rankLeaderboard(filterLeaderboard(entries, tab));
+      const current = playerId ? ranked.find((entry) => entry.playerId === playerId) : null;
+
+      return jsonResponse({
+        entries: ranked.slice(0, 100).map((entry) => ({
+          ...entry,
+          isCurrentUser: entry.playerId === playerId
+        })),
+        currentRank: current?.rank ?? null,
+        total: ranked.length,
+        date: url.searchParams.get("date") ?? todayIso(now())
+      });
+    },
+
+    async POST(req: Request): Promise<Response> {
+      try {
+        const payload = (await req.json()) as SubmitPayload;
+        const entry = parseSubmitPayload(payload, now());
+        if (!entry) {
+          return jsonResponse({ error: "Invalid leaderboard result." }, { status: 400 });
+        }
+
+        const entries = await store.read();
+        const nextEntries = upsertLeaderboardEntry(entries, entry);
+        await store.write(nextEntries);
+
+        const rank = rankLeaderboard(nextEntries).find((rankedEntry) => rankedEntry.playerId === entry.playerId && rankedEntry.date === entry.date);
+
+        return jsonResponse({
+          entry: {
+            ...entry,
+            countryFlag: rank?.countryFlag
+          },
+          rank: rank?.rank ?? null
+        });
+      } catch (error) {
+        console.error("Leaderboard API error:", error);
+        return jsonResponse({ error: "Could not save leaderboard result." }, { status: 500 });
+      }
+    }
+  };
+}
