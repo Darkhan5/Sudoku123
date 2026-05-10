@@ -1,36 +1,62 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { DIAMOND_EARNING_RULES, DIAMOND_SPEND_OPTIONS, calculatePuzzleDiamondReward } from "../../lib/domain/economy";
+import {
+  DIAMOND_EARNING_RULES,
+  DIAMOND_STORE_PACKS,
+  calculatePuzzleDiamondReward,
+  getDiamondStorePack,
+  getDiamondStorePackTotalDiamonds,
+  insufficientDiamondsMessage
+} from "../../lib/domain/economy";
 
 describe("diamond economy", () => {
-  it("explains every way to earn diamonds", () => {
+  it("uses Diamonds as the only currency reward", () => {
     assert.deepEqual(
       DIAMOND_EARNING_RULES.map((rule) => rule.id),
-      ["solve", "daily_login", "streak", "speed"]
+      ["solve", "daily", "streak", "clean", "achievement"]
     );
+    assert.ok(DIAMOND_EARNING_RULES.every((rule) => rule.description.includes("💎")));
   });
 
-  it("offers clear Sudoku-native spend options", () => {
+  it("offers real Diamond Store pack pricing", () => {
     assert.deepEqual(
-      DIAMOND_SPEND_OPTIONS.map((option) => option.id),
-      ["ai_hint", "mistake_shield", "time_freeze", "ornament_pack"]
+      DIAMOND_STORE_PACKS.map((pack) => [pack.name, pack.diamonds, pack.price]),
+      [
+        ["Стартовый набор", 50, "500 тг"],
+        ["Малый набор", 120, "1 500 тг"],
+        ["Средний набор", 300, "3 000 тг"],
+        ["Большой набор", 700, "6 000 тг"]
+      ]
     );
-    assert.ok(DIAMOND_SPEND_OPTIONS.every((option) => option.cost > 0));
+    assert.equal(DIAMOND_STORE_PACKS.at(-1)?.label, "Выгодно");
   });
 
-  it("rewards solving, streak retention, and speed without exceeding the daily cap", () => {
+  it("finds configured Stripe packs and includes bonuses in grants", () => {
+    const pack = getDiamondStorePack("large");
+
+    assert.equal(pack?.id, "large");
+    assert.equal(pack ? getDiamondStorePackTotalDiamonds(pack) : 0, 810);
+    assert.equal(getDiamondStorePack("unknown"), undefined);
+  });
+
+  it("rewards solving, daily play, streaks, clean play, and achievements", () => {
     const reward = calculatePuzzleDiamondReward({
-      difficulty: "medium",
+      difficulty: "hard",
       time: 420,
       mistakes: 0,
       streak: 5,
-      isNewStreakDay: true
+      isNewStreakDay: true,
+      achievementUnlocked: true
     });
 
-    assert.equal(reward.total, 4);
+    assert.ok(reward.total >= 5);
     assert.deepEqual(
       reward.reasons.map((reason) => reason.id),
-      ["solve", "clean", "streak", "speed"]
+      ["solve", "daily", "streak", "clean", "achievement"]
     );
+  });
+
+  it("formats blocked diamond purchase details", () => {
+    assert.equal(insufficientDiamondsMessage(25, 12), "Недостаточно алмазов\nНужно: 25 💎\nУ вас: 12 💎");
   });
 });

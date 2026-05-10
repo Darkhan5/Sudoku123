@@ -1,17 +1,10 @@
 import type { Difficulty } from "../../types";
 
-export interface DiamondRule {
-  id: "solve" | "daily_login" | "streak" | "speed" | "clean";
+export interface DiamondRewardRule {
+  id: "solve" | "daily" | "streak" | "clean" | "achievement";
   title: string;
   description: string;
   amount: number;
-}
-
-export interface DiamondSpendOption {
-  id: "ai_hint" | "mistake_shield" | "time_freeze" | "ornament_pack";
-  title: string;
-  description: string;
-  cost: number;
 }
 
 export interface PuzzleRewardInput {
@@ -20,90 +13,96 @@ export interface PuzzleRewardInput {
   mistakes: number;
   streak: number;
   isNewStreakDay: boolean;
+  achievementUnlocked?: boolean;
 }
 
-export interface PuzzleReward {
+export interface CurrencyReward {
   total: number;
-  reasons: DiamondRule[];
+  reasons: DiamondRewardRule[];
 }
 
-export const DIAMOND_EARNING_RULES: DiamondRule[] = [
+export interface DiamondStorePack {
+  id: "starter" | "small" | "medium" | "large";
+  name: string;
+  diamonds: number;
+  bonus: number;
+  price: string;
+  label?: string;
+}
+
+export type DiamondStorePackId = DiamondStorePack["id"];
+
+export const DIAMOND_EARNING_RULES: DiamondRewardRule[] = [
   {
     id: "solve",
-    title: "Решить головоломку",
-    description: "+1 за каждую завершённую партию.",
+    title: "Партия решена",
+    description: "+1 💎 за честно завершённое судоку.",
     amount: 1
   },
   {
-    id: "daily_login",
-    title: "Ежедневный вход",
-    description: "+1 за первый вход в приложение за день.",
+    id: "daily",
+    title: "Задача дня",
+    description: "+1 💎 за новый игровой день.",
     amount: 1
   },
   {
     id: "streak",
-    title: "Поддержать стрик",
-    description: "+1 за новый день в серии после решения головоломки.",
+    title: "Серия",
+    description: "+1 💎 за поддержание серии.",
     amount: 1
   },
   {
-    id: "speed",
-    title: "Решить на время",
-    description: "+1 за быстрое решение в рамках сложности.",
+    id: "clean",
+    title: "Чистое решение",
+    description: "+1 💎 за партию без ошибок.",
+    amount: 1
+  },
+  {
+    id: "achievement",
+    title: "Достижение",
+    description: "+1 💎 за новое достижение.",
     amount: 1
   }
 ];
 
-export const DIAMOND_SPEND_OPTIONS: DiamondSpendOption[] = [
-  {
-    id: "ai_hint",
-    title: "ИИ-подсказка",
-    description: "Дополнительная подсказка, когда бесплатный лимит закончился.",
-    cost: 3
-  },
-  {
-    id: "mistake_shield",
-    title: "Защита ошибки",
-    description: "Один раз предупреждает перед неверным ходом.",
-    cost: 5
-  },
-  {
-    id: "time_freeze",
-    title: "Пауза таймера",
-    description: "Замораживает таймер на короткую проверку доски.",
-    cost: 8
-  },
-  {
-    id: "ornament_pack",
-    title: "Сезонный пак",
-    description: "Открывает временный визуальный набор для режима Өрнек.",
-    cost: 12
-  }
+export const DIAMOND_STORE_PACKS: DiamondStorePack[] = [
+  { id: "starter", name: "Стартовый набор", diamonds: 50, bonus: 0, price: "500 тг" },
+  { id: "small", name: "Малый набор", diamonds: 120, bonus: 10, price: "1 500 тг" },
+  { id: "medium", name: "Средний набор", diamonds: 300, bonus: 35, price: "3 000 тг" },
+  { id: "large", name: "Большой набор", diamonds: 700, bonus: 110, price: "6 000 тг", label: "Выгодно" }
 ];
 
-const SPEED_TARGET_SECONDS: Record<Difficulty, number> = {
-  easy: 300,
-  medium: 480,
-  hard: 720,
-  expert: 960
+export function getDiamondStorePack(packId?: string | null): DiamondStorePack | undefined {
+  return DIAMOND_STORE_PACKS.find((pack) => pack.id === packId);
+}
+
+export function getDiamondStorePackTotalDiamonds(pack: Pick<DiamondStorePack, "diamonds" | "bonus">): number {
+  return pack.diamonds + pack.bonus;
+}
+
+const DIFFICULTY_BONUS: Record<Difficulty, number> = {
+  easy: 0,
+  medium: 0,
+  hard: 1,
+  expert: 2
 };
 
-const CLEAN_RULE: DiamondRule = {
-  id: "clean",
-  title: "Без ошибок",
-  description: "+1 за аккуратное решение без ошибок.",
-  amount: 1
-};
+export function calculatePuzzleDiamondReward(input: PuzzleRewardInput): CurrencyReward {
+  const reasons: DiamondRewardRule[] = [
+    { ...DIAMOND_EARNING_RULES[0], amount: DIAMOND_EARNING_RULES[0].amount + DIFFICULTY_BONUS[input.difficulty] }
+  ];
 
-export function calculatePuzzleDiamondReward(input: PuzzleRewardInput): PuzzleReward {
-  const reasons: DiamondRule[] = [DIAMOND_EARNING_RULES[0]];
-
-  if (input.mistakes === 0) reasons.push(CLEAN_RULE);
-  if (input.isNewStreakDay && input.streak > 1) reasons.push(DIAMOND_EARNING_RULES[2]);
-  if (input.time > 0 && input.time <= SPEED_TARGET_SECONDS[input.difficulty]) reasons.push(DIAMOND_EARNING_RULES[3]);
+  if (input.isNewStreakDay) reasons.push(DIAMOND_EARNING_RULES[1]);
+  if (input.streak > 1) reasons.push(DIAMOND_EARNING_RULES[2]);
+  if (input.mistakes === 0) reasons.push(DIAMOND_EARNING_RULES[3]);
+  if (input.achievementUnlocked) reasons.push(DIAMOND_EARNING_RULES[4]);
 
   return {
     total: reasons.reduce((sum, reason) => sum + reason.amount, 0),
     reasons
   };
+}
+
+export function insufficientDiamondsMessage(required: number, current: number): string {
+  return `Недостаточно алмазов\nНужно: ${required} 💎\nУ вас: ${current} 💎`;
 }

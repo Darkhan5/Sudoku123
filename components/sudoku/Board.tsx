@@ -1,6 +1,6 @@
 "use client";
 
-import type { CellPosition } from "@/types";
+import type { CellPosition, NumberStyle } from "@/types";
 import { Cell } from "./Cell";
 
 interface BoardProps {
@@ -12,6 +12,11 @@ interface BoardProps {
   complete?: boolean;
   locked?: boolean;
   ornamentMode?: boolean;
+  numberStyle?: NumberStyle;
+  fogZones?: number[];
+  scrambleHighlights?: boolean;
+  frozenCell?: CellPosition | null;
+  hideAssist?: boolean;
   onSelect: (row: number, col: number) => void;
   onOrnamentInfo?: (value: number) => void;
 }
@@ -33,20 +38,34 @@ export function Board({
   complete = false,
   locked = false,
   ornamentMode = false,
+  numberStyle = "classic",
+  fogZones = [],
+  scrambleHighlights = false,
+  frozenCell = null,
+  hideAssist = false,
   onSelect,
   onOrnamentInfo
 }: BoardProps) {
   const errorSet = new Set(errors.map(keyOf));
+  const fogSet = new Set(fogZones);
   const selectedValue = selected ? board[selected.row][selected.col] : 0;
 
   return (
-    <div className={`sudoku-board ${complete ? "board-complete" : ""}`} role="grid" aria-label="Доска судоку 9 на 9">
+    <div
+      className={`sudoku-board number-style-${numberStyle} ${complete ? "board-complete" : ""} ${
+        scrambleHighlights ? "board-shuffle-vision" : ""
+      }`}
+      role="grid"
+      aria-label="Доска судоку 9 на 9"
+    >
       {board.map((row, rowIndex) =>
         row.map((value, colIndex) => {
           const cell = { row: rowIndex, col: colIndex };
           const isSelected = selected?.row === rowIndex && selected?.col === colIndex;
-          const highlighted = selected ? selected.row === rowIndex || selected.col === colIndex || sameBox(selected, cell) : false;
-          const sameNumber = selectedValue !== 0 && value === selectedValue && !isSelected;
+          const highlighted = !hideAssist && selected ? selected.row === rowIndex || selected.col === colIndex || sameBox(selected, cell) : false;
+          const sameNumber = !hideAssist && selectedValue !== 0 && value === selectedValue && !isSelected;
+          const zone = Math.floor(rowIndex / 3) * 3 + Math.floor(colIndex / 3);
+          const frozen = frozenCell?.row === rowIndex && frozenCell?.col === colIndex;
 
           return (
             <Cell
@@ -62,6 +81,8 @@ export function Board({
               error={errorSet.has(keyOf(cell))}
               ornamentMode={ornamentMode}
               locked={locked}
+              fogged={fogSet.has(zone)}
+              frozen={frozen}
               onSelect={onSelect}
               onOrnamentInfo={onOrnamentInfo}
             />

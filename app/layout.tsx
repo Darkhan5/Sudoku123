@@ -5,11 +5,11 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://sudoku-league.vercel.app"),
-  title: "Қазақ Судоку",
-  description: "Ежедневное судоку с ИИ-подсказками, Diamond, локальным профилем и общим рейтингом.",
+  title: "Судоку",
+  description: "Соревновательное судоку с ИИ-подсказками, прогрессией, косметикой, рейтингом и PvP-саботажами.",
   openGraph: {
-    title: "Қазақ Судоку",
-    description: "Задача дня, ИИ-подсказки, рейтинг Казахстана и общий рейтинг.",
+    title: "Судоку",
+    description: "Платформа судоку с ИИ-подсказками, прогрессией, косметикой и PvP-режимом для друзей.",
     images: ["/og.svg"]
   },
   icons: {

@@ -1,4 +1,5 @@
-import type { Player } from "@/types";
+import type { Difficulty, NumberStyle, Player } from "@/types";
+import { calculateProgressionReward, mergeAchievements, rankForXp } from "@/lib/domain/progression";
 import { normalizePlayedDates } from "@/lib/domain/streak";
 import { safeJsonParse, todayIso, yesterdayIso } from "@/lib/utils/date";
 import { getCountryCode, normalizeCountryName, type OnboardingProfile } from "@/lib/domain/onboarding";
@@ -15,26 +16,55 @@ function emitPlayerUpdate(): void {
   }
 }
 
+function normalizeRank(rank: Player["rank"] | "bronze" | "silver" | "gold" | undefined, xp: number): Player["rank"] {
+  if (rank === "bronze") return "bronze-i";
+  if (rank === "silver") return "silver-i";
+  if (rank === "gold") return "gold-i";
+  return rank ?? rankForXp(xp);
+}
+
+function withPlayerDefaults(player: Player): Player {
+  const playerWithoutLegacyCurrency = { ...player } as Player & Record<string, unknown>;
+  delete playerWithoutLegacyCurrency["bu" + "cks"];
+  const xp = player.xp ?? 0;
+  const level = player.level ?? 1;
+  const ownedNumberPacks: NumberStyle[] = player.ownedNumberPacks?.length ? player.ownedNumberPacks : ["classic"];
+  const legacyManualTitle = player.title && ["Puzzle Slayer", "Logic Master", "Grid Hacker", "AI Disciple"].includes(player.title);
+  const firstTitleClaimed = player.firstTitleClaimed ?? Boolean(player.title && !legacyManualTitle);
+  return {
+    ...playerWithoutLegacyCurrency,
+    xp,
+    level,
+    rank: normalizeRank(player.rank, xp),
+    title: firstTitleClaimed ? player.title : undefined,
+    firstTitleClaimed,
+    ownedNumberPacks,
+    numberStyle: player.numberStyle ?? "classic",
+    achievements: player.achievements ?? [],
+    seasonBadges: player.seasonBadges ?? []
+  };
+}
+
 export function getPlayer(): Player | null {
   if (!hasStorage()) return null;
   const player = safeJsonParse<Player | null>(localStorage.getItem(PLAYER_KEY), null);
   if (!player) return null;
   const country = normalizeCountryName(player.country);
-  return {
+  return withPlayerDefaults({
     ...player,
     country,
     countryCode: getCountryCode(country) ?? player.countryCode
-  };
+  });
 }
 
 export function savePlayer(player: Player): Player {
   if (!hasStorage()) return player;
   const country = normalizeCountryName(player.country);
-  const normalized = {
+  const normalized = withPlayerDefaults({
     ...player,
     country,
     countryCode: getCountryCode(country) ?? player.countryCode
-  };
+  });
   localStorage.setItem(PLAYER_KEY, JSON.stringify(normalized));
   emitPlayerUpdate();
   return normalized;
@@ -59,6 +89,14 @@ export function initPlayer(name = "Игрок", city = "Астана"): Player {
     totalSolved: 0,
     avgTime: 0,
     accuracy: 100,
+    xp: 0,
+    level: 1,
+    rank: "bronze-i",
+    firstTitleClaimed: false,
+    ownedNumberPacks: ["classic"],
+    numberStyle: "classic",
+    achievements: [],
+    seasonBadges: [],
     icons: ["brain"],
     activeIcon: "brain",
     badges: []
@@ -81,6 +119,14 @@ export function createOnboardedPlayer(profile: OnboardingProfile, current: Playe
       totalSolved: 0,
       avgTime: 0,
       accuracy: 100,
+      xp: 0,
+      level: 1,
+      rank: "bronze-i" as const,
+      firstTitleClaimed: false,
+      ownedNumberPacks: ["classic" as const],
+      numberStyle: "classic" as const,
+      achievements: [],
+      seasonBadges: [],
       icons: ["brain"],
       activeIcon: "brain",
       badges: []
@@ -99,7 +145,7 @@ export function updatePlayer(partial: Partial<Player>): Player {
   return savePlayer({ ...current, ...partial });
 }
 
-export function recordSolvedGame(params: { time: number; mistakes: number; hintsUsed: number; date?: string }): Player {
+export function recordSolvedGame(params: { time: number; mistakes: number; hintsUsed: number; date?: string; difficulty?: Difficulty; arenaWin?: boolean }): Player {
   const player = getPlayer() ?? initPlayer();
   const date = params.date ?? todayIso();
   const solved = player.totalSolved + 1;
@@ -113,6 +159,25 @@ export function recordSolvedGame(params: { time: number; mistakes: number; hints
   } else if (player.lastPlayedDate === yesterdayIso(new Date(`${date}T12:00:00.000Z`))) {
     streak = player.streak + 1;
   }
+  const progression = calculateProgressionReward(
+    {
+      difficulty: params.difficulty ?? "medium",
+      time: params.time,
+      mistakes: params.mistakes,
+      hintsUsed: params.hintsUsed,
+      streak,
+      arenaWin: params.arenaWin
+    },
+    player.xp ?? 0
+  );
+  const achievements = mergeAchievements(player, progression, {
+    difficulty: params.difficulty ?? "medium",
+    time: params.time,
+    mistakes: params.mistakes,
+    hintsUsed: params.hintsUsed,
+    streak,
+    arenaWin: params.arenaWin
+  });
 
   return savePlayer({
     ...player,
@@ -121,6 +186,10 @@ export function recordSolvedGame(params: { time: number; mistakes: number; hints
     playedDates: normalizePlayedDates([...(player.playedDates ?? []), date]),
     totalSolved: solved,
     avgTime,
-    accuracy
+    accuracy,
+    xp: (player.xp ?? 0) + progression.xp,
+    level: progression.level,
+    rank: progression.rank,
+    achievements
   });
 }

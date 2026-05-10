@@ -11,7 +11,18 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     setOnboarded(isPlayerOnboarded(getPlayer()));
-    document.documentElement.dataset.theme = getSettings().theme;
+    const settings = getSettings();
+    document.documentElement.dataset.theme = settings.theme;
+    document.documentElement.dataset.motion = settings.reducedMotion ? "reduced" : "full";
+    document.documentElement.dataset.shake = settings.screenShake === false ? "off" : "on";
+    document.documentElement.dataset.errorTexture = settings.accessibility?.errorCell.texture ?? "diagonal";
+    document.documentElement.dataset.errorPattern = settings.accessibility?.errorCell.pattern ?? "warning";
+    document.documentElement.dataset.relatedTexture = settings.accessibility?.relatedCells.dottedTexture === false ? "solid" : "dots";
+    document.documentElement.style.setProperty("--a11y-error", settings.accessibility?.errorCell.color ?? "#b91c1c");
+    document.documentElement.style.setProperty("--a11y-selected", settings.accessibility?.selectedCell.outlineColor ?? "#2563eb");
+    document.documentElement.style.setProperty("--a11y-selected-width", `${settings.accessibility?.selectedCell.borderThickness ?? 4}px`);
+    document.documentElement.style.setProperty("--a11y-hint", settings.accessibilityColors?.hint ?? "#0f766e");
+    document.documentElement.style.setProperty("--a11y-related", settings.accessibility?.relatedCells.highlightColor ?? "#64748b");
     setReady(true);
   }, []);
 

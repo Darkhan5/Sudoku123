@@ -2,6 +2,36 @@ export type Difficulty = "easy" | "medium" | "hard" | "expert";
 export type Plan = "free" | "diamond";
 export type Rarity = "common" | "rare" | "epic";
 export type ThemeName = "standard" | "diamond-white" | "diamond-black" | "diamond-felt";
+export type NumberStyle = "classic" | "neon" | "pixel" | "handwritten";
+export type RankedTier = "bronze-i" | "bronze-ii" | "silver-i" | "silver-ii" | "gold-i" | "gold-ii";
+export type ProfileTitle = string;
+export type ProfileBanner = "cyber-grid" | "shadow-wave" | "space-drift";
+export type ProfileBorder = "none" | "neon" | "gold" | "prism";
+export type ErrorCellTexture = "diagonal" | "crosshatch" | "dots";
+export type ErrorCellPattern = "warning" | "corner" | "ring";
+
+export interface AccessibilityColors {
+  error: string;
+  selected: string;
+  hint: string;
+  related: string;
+}
+
+export interface AccessibilitySettings {
+  errorCell: {
+    color: string;
+    texture: ErrorCellTexture;
+    pattern: ErrorCellPattern;
+  };
+  selectedCell: {
+    outlineColor: string;
+    borderThickness: number;
+  };
+  relatedCells: {
+    dottedTexture: boolean;
+    highlightColor: string;
+  };
+}
 
 export interface CellPosition {
   row: number;
@@ -25,6 +55,17 @@ export interface Player {
   totalSolved: number;
   avgTime: number;
   accuracy: number;
+  xp?: number;
+  level?: number;
+  rank?: RankedTier;
+  title?: ProfileTitle;
+  firstTitleClaimed?: boolean;
+  ownedNumberPacks?: NumberStyle[];
+  banner?: ProfileBanner;
+  border?: ProfileBorder;
+  numberStyle?: NumberStyle;
+  achievements?: string[];
+  seasonBadges?: string[];
   icons: string[];
   activeIcon: string;
   badges: string[];
@@ -83,6 +124,9 @@ export interface CoachRequest {
   currentValue: number | null;
   difficulty: Difficulty;
   mistakes: number;
+  plan?: Plan;
+  elapsed?: number;
+  hintsUsed?: number;
 }
 
 export interface CoachResponse {
@@ -109,4 +153,10 @@ export interface Settings {
   language: "ru";
   ornamentMode?: boolean;
   ornamentIntroSeen?: boolean;
+  numberStyle?: NumberStyle;
+  reducedMotion?: boolean;
+  screenShake?: boolean;
+  sound?: boolean;
+  accessibility?: AccessibilitySettings;
+  accessibilityColors?: AccessibilityColors;
 }

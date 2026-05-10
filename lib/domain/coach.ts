@@ -1,10 +1,15 @@
-import type { CellPosition } from "../../types";
+import type { CellPosition, Difficulty, Plan } from "../../types";
 
 export interface SimpleCoachHintInput {
   board: number[][];
   solution: number[][];
   selectedCell: CellPosition;
   currentValue: number | null;
+  difficulty?: Difficulty;
+  mistakes?: number;
+  elapsed?: number;
+  hintsUsed?: number;
+  plan?: Plan;
 }
 
 export interface SimpleCoachHint {
@@ -44,6 +49,27 @@ function list(values: number[]): string {
   return values.length > 0 ? values.join(", ") : "пока нет чисел";
 }
 
+function coachPattern(candidates: number[], plan: Plan): string {
+  if (candidates.length === 1) {
+    return `Это naked single: после проверки строки, столбца и квадрата остается только ${candidates[0]}.`;
+  }
+  if (candidates.length === 2) {
+    return `Здесь пара кандидатов. Не спеши угадывать: сравни эти два числа с соседними клетками в том же квадрате.`;
+  }
+  if (plan === "diamond") {
+    return "Премиум-анализ: отметь кандидатов во всех клетках квадрата и ищи скрытую одиночку, когда число может стоять только в одной позиции.";
+  }
+  return "Лучший следующий шаг: выпиши кандидатов и исключай числа по строке, столбцу и квадрату.";
+}
+
+function behaviorAdvice(input: SimpleCoachHintInput): string {
+  const parts: string[] = [];
+  if ((input.mistakes ?? 0) >= 3) parts.push("У тебя уже несколько ошибок: замедлись на одну проверку строки и столбца перед вводом.");
+  if ((input.hintsUsed ?? 0) >= 2) parts.push("Ты часто просишь подсказки в этой партии: попробуй сначала поставить заметки в соседнем квадрате.");
+  if ((input.elapsed ?? 0) > 600) parts.push("Темп партии спокойный: ищи легкие одиночные кандидаты, чтобы вернуть ритм.");
+  return parts.join(" ");
+}
+
 export function buildSimpleCoachHint(input: SimpleCoachHintInput): SimpleCoachHint {
   const { board, solution, selectedCell, currentValue } = input;
   const answer = solution[selectedCell.row][selectedCell.col];
@@ -53,23 +79,26 @@ export function buildSimpleCoachHint(input: SimpleCoachHintInput): SimpleCoachHi
   const blocked = new Set([...rowValues, ...columnValues, ...boxValues]);
   const candidates = Array.from({ length: 9 }, (_, index) => index + 1).filter((value) => !blocked.has(value));
   const position = `строка ${selectedCell.row + 1}, столбец ${selectedCell.col + 1}`;
+  const pattern = coachPattern(candidates, input.plan ?? "free");
+  const advice = behaviorAdvice(input);
+  const suffix = advice ? ` ${advice}` : "";
 
   if (currentValue && currentValue !== answer) {
     return {
       answer,
-      explanation: `${currentValue} здесь не подходит: это клетка ${position}, а для неё нужна другая цифра. В строке уже есть ${list(rowValues)}, в столбце ${list(columnValues)}, в квадрате 3x3 ${list(boxValues)}. Подходящие кандидаты: ${list(candidates)}.`
+      explanation: `${currentValue} здесь не подходит: это клетка ${position}. В строке уже есть ${list(rowValues)}, в столбце ${list(columnValues)}, в квадрате 3x3 ${list(boxValues)}. Подходящие кандидаты: ${list(candidates)}. ${pattern}${suffix}`
     };
   }
 
   if (currentValue === answer) {
     return {
       answer,
-      explanation: `Эта цифра подходит для клетки ${position}. Она не конфликтует со строкой, столбцом и квадратом 3x3. Ответ ниже можно раскрыть, чтобы просто проверить себя.`
+      explanation: `Эта цифра подходит для клетки ${position}: она не конфликтует со строкой, столбцом и квадратом 3x3. ${pattern}${suffix}`
     };
   }
 
   return {
     answer,
-    explanation: `Клетка пустая: ${position}. Смотри на строку, столбец и квадрат 3x3. В строке уже есть ${list(rowValues)}, в столбце ${list(columnValues)}, в квадрате ${list(boxValues)}. Подходящие кандидаты: ${list(candidates)}.`
+    explanation: `Клетка пустая: ${position}. В строке уже есть ${list(rowValues)}, в столбце ${list(columnValues)}, в квадрате ${list(boxValues)}. Подходящие кандидаты: ${list(candidates)}. ${pattern}${suffix}`
   };
 }

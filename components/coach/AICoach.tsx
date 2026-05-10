@@ -14,6 +14,8 @@ interface AICoachProps {
   selectedCell: CellPosition | null;
   difficulty: Difficulty;
   mistakes: number;
+  elapsed: number;
+  hintsUsed: number;
   plan: Plan;
   onClose: () => void;
   onLimit: () => void;
@@ -40,6 +42,8 @@ export function AICoach({
   selectedCell,
   difficulty,
   mistakes,
+  elapsed,
+  hintsUsed,
   plan,
   onClose,
   onLimit,
@@ -78,8 +82,8 @@ export function AICoach({
             id: crypto.randomUUID(),
             text:
               plan === "free"
-                ? "Сегодня бесплатные подсказки закончились. Diamond открывает подсказки без лимита."
-                : "В Diamond подсказки без лимита. Попробуй ещё раз.",
+                ? "Сегодня бесплатные подсказки закончились. Премиум открывает подсказки без лимита."
+                : "В премиуме подсказки без лимита. Попробуй ещё раз.",
             time: nowTime(),
             error: plan === "free"
           },
@@ -102,7 +106,10 @@ export function AICoach({
             selectedCell,
             currentValue: board[selectedCell.row][selectedCell.col] || null,
             difficulty,
-            mistakes
+            mistakes,
+            elapsed,
+            hintsUsed,
+            plan
           }),
           signal: controller.signal
         });
@@ -142,7 +149,7 @@ export function AICoach({
     }
 
     askCoach();
-  }, [board, difficulty, mistakes, onHintUsed, onLimit, open, plan, requestId, selectedCell, solution]);
+  }, [board, difficulty, elapsed, hintsUsed, mistakes, onHintUsed, onLimit, open, plan, requestId, selectedCell, solution]);
 
   if (!open) return null;
 

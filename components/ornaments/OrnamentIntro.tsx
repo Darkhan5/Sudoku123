@@ -17,7 +17,7 @@ export function OrnamentIntro({ open, onStart, onSkip }: OrnamentIntroProps) {
       <section className="w-full max-w-2xl rounded-2xl bg-white p-5 shadow-2xl">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-bold uppercase text-primary">Возможность Diamond</p>
+            <p className="text-xs font-bold uppercase text-primary">Возможность премиума</p>
             <h2 className="mt-1 text-3xl font-black text-slate-950">Өрнек режимі</h2>
             <p className="mt-2 text-sm leading-6 text-slate-600">
               Цифры заменены казахскими орнаментами. Логика та же, смысл глубже.

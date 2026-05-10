@@ -1,5 +1,6 @@
 "use client";
 
+import type { NumberStyle } from "@/types";
 import { OrnamentSymbol } from "@/components/ornaments/OrnamentSymbol";
 
 interface ControlsProps {
@@ -9,6 +10,7 @@ interface ControlsProps {
   locked?: boolean;
   ornamentMode?: boolean;
   canUseOrnament?: boolean;
+  numberStyle?: NumberStyle;
   onNumber: (value: number) => void;
   onUndo: () => void;
   onToggleNotes: () => void;
@@ -25,6 +27,7 @@ export function Controls({
   locked = false,
   ornamentMode = false,
   canUseOrnament = false,
+  numberStyle = "classic",
   onNumber,
   onUndo,
   onToggleNotes,
@@ -35,7 +38,7 @@ export function Controls({
 }: ControlsProps) {
   return (
     <section className="controls-panel" aria-label="Управление судоку">
-      <div className="number-pad" aria-label="Цифры">
+      <div className={`number-pad number-style-${numberStyle}`} aria-label="Цифры">
         {Array.from({ length: 9 }, (_, index) => {
           const value = index + 1;
           return (
@@ -47,7 +50,7 @@ export function Controls({
               onClick={() => onNumber(value)}
               aria-label={`Поставить ${value}`}
             >
-              {ornamentMode ? <OrnamentSymbol value={value} /> : value}
+              {ornamentMode ? <OrnamentSymbol value={value} /> : <span className="digit">{value}</span>}
             </button>
           );
         })}
@@ -64,7 +67,7 @@ export function Controls({
           disabled={locked}
           onClick={onToggleNotes}
         >
-          <span aria-hidden>З</span>
+          <span aria-hidden>N</span>
           <span>Заметки</span>
         </button>
         <button type="button" className="action-button" disabled={locked} onClick={onErase}>
@@ -72,7 +75,7 @@ export function Controls({
           <span>Стереть</span>
         </button>
         <button type="button" className="hint-button" disabled={locked} onClick={onHint}>
-          <span aria-hidden>ИИ</span>
+          <span aria-hidden>AI</span>
           <span>Подсказка</span>
         </button>
         <button
@@ -81,8 +84,8 @@ export function Controls({
           disabled={locked}
           onClick={onToggleOrnament}
         >
-          <span aria-hidden>{canUseOrnament ? (ornamentMode ? "1" : "Ө") : "◆"}</span>
-          <span>{ornamentMode ? "Цифры" : "Өрнек"}</span>
+          <span aria-hidden>{canUseOrnament ? (ornamentMode ? "1" : "O") : "◆"}</span>
+          <span>{ornamentMode ? "Цифры" : "Орнамент"}</span>
         </button>
         <button type="button" className="action-button" disabled={locked || !ornamentMode} onClick={onOpenOrnamentLegend}>
           <span aria-hidden>?</span>

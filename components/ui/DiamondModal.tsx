@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { ThemeName } from "@/types";
-import { DIAMOND_PLAN, getThemeCatalog } from "@/lib/domain/subscription";
-import { getPlayer, updatePlayer } from "@/lib/storage/player";
-import { setTheme } from "@/lib/storage/settings";
+import { createPortal } from "react-dom";
+import { DIAMOND_STORE_PACKS, type DiamondStorePackId } from "@/lib/domain/economy";
+import { DIAMOND_PLAN } from "@/lib/domain/subscription";
+import { getPlayer } from "@/lib/storage/player";
+import { DiamondGlyph } from "@/components/ui/DiamondGlyph";
 
 interface DiamondModalProps {
   open: boolean;
@@ -12,14 +13,26 @@ interface DiamondModalProps {
   onUpgrade?: () => void;
 }
 
-const THEMES = getThemeCatalog();
+type CheckoutLoading = "subscription" | DiamondStorePackId | null;
+type CheckoutRequestBody = {
+  type: "subscription" | "diamond_pack";
+  packId?: DiamondStorePackId;
+  playerId?: string;
+};
 
-export function DiamondModal({ open, onClose, onUpgrade }: DiamondModalProps) {
-  const [choosingTheme, setChoosingTheme] = useState(false);
+export function DiamondModal({ open, onClose }: DiamondModalProps) {
+  const [notice, setNotice] = useState("");
+  const [checkoutLoading, setCheckoutLoading] = useState<CheckoutLoading>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
-    setChoosingTheme(getPlayer()?.plan === "diamond");
+    setNotice("");
+    setCheckoutLoading(null);
 
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") onClose();
@@ -29,35 +42,70 @@ export function DiamondModal({ open, onClose, onUpgrade }: DiamondModalProps) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [onClose, open]);
 
-  if (!open) return null;
+  useEffect(() => {
+    if (!open) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [open]);
 
-  function activateDiamond() {
-    updatePlayer({ plan: "diamond" });
-    onUpgrade?.();
-    setChoosingTheme(true);
+  if (!open || !mounted) return null;
+
+  async function startCheckout(body: { type: "subscription" } | { type: "diamond_pack"; packId: DiamondStorePackId }, loadingKey: CheckoutLoading) {
+    setCheckoutLoading(loadingKey);
+    setNotice("");
+
+    try {
+      const player = getPlayer();
+      const checkoutBody: CheckoutRequestBody = {
+        ...body,
+        playerId: player?.id
+      };
+      const response = await fetch("/api/stripe/create-checkout-session", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(checkoutBody)
+      });
+      const payload = (await response.json().catch(() => ({}))) as { url?: string; error?: string };
+
+      if (!response.ok || !payload.url) {
+        throw new Error(payload.error ?? "Stripe Checkout сейчас недоступен");
+      }
+
+      window.location.assign(payload.url);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Не удалось открыть Stripe Checkout");
+      setCheckoutLoading(null);
+    }
   }
 
-  function chooseTheme(theme: ThemeName) {
-    setTheme(theme);
-    onUpgrade?.();
-    onClose();
+  function startSubscriptionCheckout() {
+    void startCheckout({ type: "subscription" }, "subscription");
   }
 
-  return (
+  function startPackCheckout(packId: DiamondStorePackId) {
+    void startCheckout({ type: "diamond_pack", packId }, packId);
+  }
+
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 grid place-items-center bg-slate-950/70 px-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-slate-950/70 p-4 backdrop-blur-sm"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
       role="presentation"
     >
       <section
-        className="w-full max-w-[720px] overflow-hidden rounded-2xl bg-white shadow-2xl"
+        className="flex max-h-[calc(100dvh-2rem)] w-full max-w-[860px] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
         role="dialog"
         aria-modal="true"
-        aria-label="Подписка Diamond"
+        aria-label="Магазин алмазов"
       >
-        <div className="relative bg-slate-950 px-5 py-5 text-white">
+        <div className="relative overflow-hidden bg-slate-950 px-5 py-5 text-white">
           <button
             type="button"
             className="absolute right-3 top-3 grid min-h-11 min-w-11 place-items-center rounded-full text-xl text-white/90 transition hover:bg-white/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
@@ -66,61 +114,81 @@ export function DiamondModal({ open, onClose, onUpgrade }: DiamondModalProps) {
           >
             x
           </button>
-          <p className="text-sm font-semibold text-cyan-200">Қазақ Судоку</p>
-          <h2 className="mt-1 text-3xl font-black">{choosingTheme ? "Выбери доску" : "Подписка"}</h2>
-          <p className="mt-2 text-sm text-slate-300">
-            {choosingTheme ? "Diamond открывает три читаемых стиля доски." : "Остаются только два варианта: Бесплатно и Diamond."}
-          </p>
+          <div className="flex items-start gap-4 pr-12">
+            <span className="diamond-modal-mark" aria-hidden>
+              <DiamondGlyph className="diamond-glyph-xl" />
+            </span>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-cyan-200">Судоку</p>
+              <h2 className="mt-1 text-3xl font-black">Магазин алмазов</h2>
+              <p className="mt-2 text-sm text-slate-300">Подписка и разовые наборы алмазов открываются через Stripe Checkout.</p>
+            </div>
+          </div>
         </div>
 
-        {!choosingTheme ? (
-          <div className="grid gap-3 p-5 md:grid-cols-2">
-            <section className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <p className="text-xs font-black uppercase text-slate-400">Бесплатно</p>
-              <h3 className="mt-2 text-2xl font-black text-slate-950">0 ₸</h3>
-              <ul className="mt-4 grid gap-2 text-sm font-semibold text-slate-700">
-                <li>Ежедневное судоку</li>
-                <li>3 ИИ-подсказки в день</li>
-                <li>Обычная доска</li>
-                <li>Режим цифр</li>
-              </ul>
-            </section>
+        <div className="grid min-h-0 gap-5 overflow-y-auto p-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <section>
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <p className="text-xs font-black uppercase text-primary">Магазин алмазов</p>
+                <h3 className="text-xl font-black text-slate-950">Получить алмазы</h3>
+              </div>
+              {notice ? <p className="rounded-full bg-amber-50 px-3 py-2 text-sm font-black text-amber-700">{notice}</p> : null}
+            </div>
 
-            <section className="rounded-2xl border border-cyan-200 bg-cyan-50 p-4">
-              <p className="text-xs font-black uppercase text-cyan-700">{DIAMOND_PLAN.name}</p>
-              <h3 className="mt-2 text-2xl font-black text-slate-950">Премиум</h3>
-              <ul className="mt-4 grid gap-2 text-sm font-semibold text-slate-700">
-                {DIAMOND_PLAN.features.map((feature) => (
-                  <li key={feature}>{feature}</li>
-                ))}
-              </ul>
-              <button type="button" className="btn-primary mt-5 w-full" onClick={activateDiamond}>
-                Активировать Diamond
-              </button>
-            </section>
-          </div>
-        ) : (
-          <div className="grid gap-3 p-5 sm:grid-cols-3">
-            {THEMES.map((theme) => (
-              <button
-                key={theme.id}
-                type="button"
-                className={`theme-choice theme-choice-${theme.id}`}
-                onClick={() => chooseTheme(theme.id)}
-              >
-                <span className="theme-choice-board" aria-hidden>
-                  <span />
-                  <span />
-                  <span />
-                  <span />
-                </span>
-                <span className="mt-3 block text-base font-black">{theme.name}</span>
-                <span className="mt-1 block text-xs font-semibold opacity-75">{theme.description}</span>
-              </button>
-            ))}
-          </div>
-        )}
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              {DIAMOND_STORE_PACKS.map((pack) => (
+                <article key={pack.id} className="diamond-shop-pack">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h4>{pack.name}</h4>
+                      <p className="inline-flex items-center gap-2">
+                        {pack.diamonds.toLocaleString("ru-RU")}
+                        <DiamondGlyph className="diamond-glyph-sm" />
+                      </p>
+                    </div>
+                    {pack.label ? <span>{pack.label}</span> : null}
+                  </div>
+                  <div className="mt-3 flex items-center justify-between gap-3 text-sm font-bold text-slate-600">
+                    <small className="inline-flex items-center gap-1">
+                      {pack.bonus > 0 ? (
+                        <>
+                          Бонус: +{pack.bonus}
+                          <DiamondGlyph className="diamond-glyph-xs" />
+                        </>
+                      ) : (
+                        "Базовый набор"
+                      )}
+                    </small>
+                    <strong>{pack.price}</strong>
+                  </div>
+                  <button type="button" className="btn-primary mt-4 w-full" onClick={() => startPackCheckout(pack.id)} disabled={checkoutLoading !== null}>
+                    {checkoutLoading === pack.id ? "Открываем Stripe..." : "Купить"}
+                  </button>
+                </article>
+              ))}
+            </div>
+          </section>
+
+          <aside className="diamond-membership-panel">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs font-black uppercase text-cyan-700">Подписка</p>
+              <DiamondGlyph className="diamond-glyph-lg" />
+            </div>
+            <h3>{DIAMOND_PLAN.name}</h3>
+            <strong>{DIAMOND_PLAN.priceMonthly}</strong>
+            <ul>
+              {DIAMOND_PLAN.features.map((feature) => (
+                <li key={feature}>{feature}</li>
+              ))}
+            </ul>
+            <button type="button" className="btn-primary mt-5 w-full" onClick={startSubscriptionCheckout} disabled={checkoutLoading !== null}>
+              {checkoutLoading === "subscription" ? "Открываем Stripe..." : "Подписаться через Stripe"}
+            </button>
+          </aside>
+        </div>
       </section>
-    </div>
+    </div>,
+    document.body
   );
 }

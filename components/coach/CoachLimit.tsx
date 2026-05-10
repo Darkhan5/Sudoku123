@@ -13,7 +13,7 @@ export function CoachLimit({ used, plan }: CoachLimitProps) {
 
   return (
     <p className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-600">
-      {Number.isFinite(limit) ? `Подсказки сегодня: ${used} из ${limit}` : "Diamond: подсказки без лимита"}
+      {Number.isFinite(limit) ? `Подсказки сегодня: ${used} из ${limit}` : "Премиум: подсказки без лимита"}
     </p>
   );
 }

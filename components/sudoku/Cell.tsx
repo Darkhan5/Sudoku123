@@ -15,6 +15,8 @@ interface CellProps {
   error: boolean;
   ornamentMode?: boolean;
   locked?: boolean;
+  fogged?: boolean;
+  frozen?: boolean;
   onSelect: (row: number, col: number) => void;
   onOrnamentInfo?: (value: number) => void;
 }
@@ -31,6 +33,8 @@ export function Cell({
   error,
   ornamentMode = false,
   locked = false,
+  fogged = false,
+  frozen = false,
   onSelect,
   onOrnamentInfo
 }: CellProps) {
@@ -57,6 +61,8 @@ export function Cell({
     selected ? "cell-selected" : "",
     error ? "cell-error" : "",
     ornamentMode ? "cell-ornament" : "",
+    fogged ? "cell-fogged" : "",
+    frozen ? "cell-frozen" : "",
     col === 2 || col === 5 ? "box-border-right" : "",
     row === 2 || row === 5 ? "box-border-bottom" : ""
   ]
@@ -77,16 +83,18 @@ export function Cell({
           onOrnamentInfo(value);
         }
       }}
-      disabled={locked && !selected}
-      aria-label={`Строка ${row + 1}, столбец ${col + 1}${value ? `, значение ${value}` : ", пусто"}`}
+      disabled={(locked && !selected) || frozen}
+      aria-label={`Строка ${row + 1}, столбец ${col + 1}${value ? `, значение ${value}` : ", пусто"}${frozen ? ", временно заморожено" : ""}`}
       aria-selected={selected}
+      aria-invalid={error}
       role="gridcell"
     >
+      {error ? <span className="cell-warning" aria-hidden>!</span> : null}
       {value ? (
         ornamentMode ? (
           <OrnamentSymbol value={value} />
         ) : (
-          <span>{value}</span>
+          <span className="digit">{value}</span>
         )
       ) : notes.size > 0 ? (
         <span className="note-grid" aria-hidden>

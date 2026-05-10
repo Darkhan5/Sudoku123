@@ -40,7 +40,12 @@ export async function POST(req: Request) {
         board: payload.board,
         solution: payload.solution,
         selectedCell: payload.selectedCell,
-        currentValue: payload.currentValue
+        currentValue: payload.currentValue,
+        difficulty: payload.difficulty,
+        mistakes: payload.mistakes,
+        elapsed: payload.elapsed,
+        hintsUsed: payload.hintsUsed,
+        plan: payload.plan
       })
     );
   } catch (error) {

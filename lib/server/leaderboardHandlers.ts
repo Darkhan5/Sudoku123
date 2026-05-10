@@ -35,6 +35,24 @@ interface SubmitPayload {
   hintsUsed?: unknown;
 }
 
+interface SupabaseLeaderboardRow {
+  id: string;
+  player_id: string;
+  name: string;
+  city: string;
+  country: string;
+  country_code: string;
+  avatar_url?: string | null;
+  icon: string;
+  date: string;
+  time: number;
+  mistakes?: number | null;
+  hints_used?: number | null;
+  accuracy?: number | null;
+  score: number;
+  created_at?: string | null;
+}
+
 const DATA_DIR = path.join(process.cwd(), ".data");
 const DATA_FILE = path.join(DATA_DIR, "leaderboard.json");
 
@@ -130,6 +148,40 @@ export function createSupabaseLeaderboardStore(params: {
     Authorization: `Bearer ${params.serviceRoleKey}`,
     "Content-Type": "application/json"
   };
+  const toRecord = (row: SupabaseLeaderboardRow): LeaderboardRecord => ({
+    id: row.id,
+    playerId: row.player_id,
+    name: row.name,
+    city: row.city,
+    country: row.country,
+    countryCode: row.country_code,
+    avatarUrl: row.avatar_url ?? "",
+    icon: row.icon,
+    date: row.date,
+    time: row.time,
+    mistakes: row.mistakes ?? 0,
+    hintsUsed: row.hints_used ?? 0,
+    accuracy: row.accuracy ?? 100,
+    score: row.score,
+    createdAt: row.created_at ?? ""
+  });
+  const toRow = (entry: LeaderboardRecord): SupabaseLeaderboardRow => ({
+    id: entry.id,
+    player_id: entry.playerId,
+    name: entry.name,
+    city: entry.city,
+    country: entry.country,
+    country_code: entry.countryCode,
+    avatar_url: entry.avatarUrl ?? "",
+    icon: entry.icon ?? "🧠",
+    date: entry.date,
+    time: entry.time,
+    mistakes: entry.mistakes ?? 0,
+    hints_used: entry.hintsUsed ?? 0,
+    accuracy: entry.accuracy ?? 100,
+    score: entry.score,
+    created_at: entry.createdAt
+  });
 
   return {
     async read() {
@@ -138,17 +190,17 @@ export function createSupabaseLeaderboardStore(params: {
         cache: "no-store"
       });
       if (!response.ok) throw new Error("Could not read Supabase leaderboard.");
-      return (await response.json()) as LeaderboardRecord[];
+      return ((await response.json()) as SupabaseLeaderboardRow[]).map(toRecord);
     },
     async write(entries) {
       if (entries.length === 0) return;
-      const response = await fetch(endpoint, {
+      const response = await fetch(`${endpoint}?on_conflict=id`, {
         method: "POST",
         headers: {
           ...headers,
           Prefer: "resolution=merge-duplicates"
         },
-        body: JSON.stringify(entries)
+        body: JSON.stringify(entries.map(toRow))
       });
       if (!response.ok) throw new Error("Could not write Supabase leaderboard.");
     }

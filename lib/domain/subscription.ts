@@ -2,8 +2,9 @@ import type { Plan, ThemeName } from "../../types";
 
 export interface SubscriptionPlan {
   id: Extract<Plan, "diamond">;
-  name: "Diamond";
-  features: ["Подсказки без лимита", "3 темы доски", "Режим Өрнек"];
+  name: "Алмазная подписка";
+  priceMonthly: "2 500 тг/месяц";
+  features: string[];
 }
 
 export interface ThemeCatalogItem {
@@ -17,8 +18,9 @@ export const FREE_COACH_LIMIT = 3;
 
 export const DIAMOND_PLAN: SubscriptionPlan = {
   id: "diamond",
-  name: "Diamond",
-  features: ["Подсказки без лимита", "3 темы доски", "Режим Өрнек"]
+  name: "Алмазная подписка",
+  priceMonthly: "2 500 тг/месяц",
+  features: ["Эксклюзивные паки цифр", "Особые орнаменты", "Косметика профиля", "Дополнительные PvP-эффекты", "Будущие сезонные награды"]
 };
 
 const DIAMOND_THEMES: ThemeCatalogItem[] = [

@@ -31,7 +31,7 @@ export function OnboardingGate({ onComplete }: OnboardingGateProps) {
     <main className="min-h-screen bg-slate-950 px-4 py-6 text-white">
       <div className="mx-auto grid min-h-[calc(100vh-3rem)] max-w-4xl content-center gap-8">
         <section className="grid gap-4">
-          <p className="text-sm font-bold uppercase tracking-wide text-cyan-300">Қазақ Судоку</p>
+          <p className="text-sm font-bold uppercase tracking-wide text-cyan-300">Судоку</p>
           <h1 className="max-w-2xl text-4xl font-black leading-tight md:text-6xl">Создай профиль игрока</h1>
           <p className="max-w-xl text-base leading-7 text-slate-300">
             Имя, страна, город и возраст нужны для локального профиля и рейтинга.

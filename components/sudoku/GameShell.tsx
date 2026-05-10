@@ -1,14 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { CellPosition, CollectibleIcon, Difficulty, Player, SudokuPuzzle } from "@/types";
+import type { CellPosition, CollectibleIcon, Difficulty, Player, Settings, SudokuPuzzle } from "@/types";
 import { rollIcon } from "@/lib/data/icons";
 import { calculatePuzzleDiamondReward } from "@/lib/domain/economy";
+import { calculateProgressionReward, rankLabel } from "@/lib/domain/progression";
 import { getDailyState, saveDailyState } from "@/lib/storage/daily";
 import { addDiamonds } from "@/lib/storage/economy";
 import { submitLeaderboardResult } from "@/lib/storage/leaderboard";
 import { getPlayer, initPlayer, recordSolvedGame, updatePlayer } from "@/lib/storage/player";
 import { getSettings, markOrnamentIntroSeen, setOrnamentMode } from "@/lib/storage/settings";
+import { playFeedback } from "@/lib/utils/feedback";
 import { todayIso } from "@/lib/utils/date";
 import { generatePuzzle, generateWithSeed } from "@/lib/sudoku/generator";
 import { getConflicts, isBoardComplete } from "@/lib/sudoku/validator";
@@ -40,11 +42,18 @@ interface Snapshot {
 }
 
 const DIFFICULTIES: Array<{ value: Difficulty; label: string }> = [
-  { value: "easy", label: "Легко" },
-  { value: "medium", label: "Средне" },
-  { value: "hard", label: "Сложно" },
+  { value: "easy", label: "Лёгкая" },
+  { value: "medium", label: "Средняя" },
+  { value: "hard", label: "Сложная" },
   { value: "expert", label: "Эксперт" }
 ];
+
+const COMBO_MILESTONES: Record<number, string> = {
+  5: "Отлично!",
+  10: "Серия!",
+  20: "Идеально!",
+  50: "Монстр Судоку!"
+};
 
 const EMPTY_BOARD = Array.from({ length: 9 }, () => Array.from({ length: 9 }, () => 0));
 const EMPTY_GIVEN = Array.from({ length: 9 }, () => Array.from({ length: 9 }, () => false));
@@ -111,7 +120,10 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
   const [player, setPlayer] = useState<Player | null>(null);
   const [completionOpen, setCompletionOpen] = useState(false);
   const [reward, setReward] = useState(0);
+  const [xpReward, setXpReward] = useState(0);
   const [iconReward, setIconReward] = useState<CollectibleIcon | null>(null);
+  const [rankUpLabel, setRankUpLabel] = useState("");
+  const [needsTitleReward, setNeedsTitleReward] = useState(false);
   const [diamondOpen, setDiamondOpen] = useState(false);
   const [coachOpen, setCoachOpen] = useState(false);
   const [coachRequestId, setCoachRequestId] = useState(0);
@@ -123,8 +135,41 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
   const [ornamentLegendOpen, setOrnamentLegendOpen] = useState(false);
   const [ornamentInfo, setOrnamentInfo] = useState<Ornament | null>(null);
   const [finalOrnamentValue, setFinalOrnamentValue] = useState<number | null>(null);
+  const [settings, setSettings] = useState<Settings>({
+    theme: "standard",
+    language: "ru",
+    numberStyle: "classic",
+    reducedMotion: false,
+    screenShake: true,
+    sound: true,
+    accessibility: {
+      errorCell: {
+        color: "#b91c1c",
+        texture: "diagonal",
+        pattern: "warning"
+      },
+      selectedCell: {
+        outlineColor: "#2563eb",
+        borderThickness: 4
+      },
+      relatedCells: {
+        dottedTexture: true,
+        highlightColor: "#64748b"
+      }
+    }
+  });
+  const [comboStreak, setComboStreak] = useState(0);
+  const [comboMessage, setComboMessage] = useState("");
+  const [comboCells, setComboCells] = useState<Set<string>>(() => new Set());
+  const [shakeActive, setShakeActive] = useState(false);
 
   const locked = mode === "daily" && complete;
+
+  const triggerScreenShake = useCallback(() => {
+    if (!settings.screenShake || settings.reducedMotion) return;
+    setShakeActive(true);
+    window.setTimeout(() => setShakeActive(false), 180);
+  }, [settings.reducedMotion, settings.screenShake]);
 
   const loadPuzzle = useCallback(
     (nextDifficulty: Difficulty, forceFresh = false) => {
@@ -147,6 +192,9 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
           setElapsed(saved.time);
           setComplete(saved.completed);
           setLeaderboardRank(null);
+          setComboStreak(0);
+          setComboMessage("");
+          setComboCells(new Set());
           setSelected(firstEmpty(saved.board, saved.given));
           setReady(true);
           return;
@@ -162,6 +210,9 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
         setElapsed(0);
         setComplete(false);
         setLeaderboardRank(null);
+        setComboStreak(0);
+        setComboMessage("");
+        setComboCells(new Set());
         setSelected(firstEmpty(generated.puzzle, generated.given));
         setReady(true);
         return;
@@ -179,6 +230,9 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
       setComplete(false);
       setLeaderboardRank(null);
       setHistory([]);
+      setComboStreak(0);
+      setComboMessage("");
+      setComboCells(new Set());
       setSelected(firstEmpty(generated.puzzle, generated.given));
       setReady(true);
     },
@@ -194,12 +248,20 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
       setPlayer(getPlayer() ?? initPlayer());
     }
 
+    function syncSettings() {
+      const next = getSettings();
+      setSettings(next);
+      setOrnamentModeState(Boolean(next.ornamentMode));
+    }
+
     syncPlayer();
-    setOrnamentModeState(Boolean(getSettings().ornamentMode));
+    syncSettings();
     window.addEventListener("sl:player", syncPlayer);
+    window.addEventListener("sl:settings", syncSettings);
     window.addEventListener("storage", syncPlayer);
     return () => {
       window.removeEventListener("sl:player", syncPlayer);
+      window.removeEventListener("sl:settings", syncSettings);
       window.removeEventListener("storage", syncPlayer);
     };
   }, []);
@@ -273,26 +335,42 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
       if (icon) {
         updatePlayer({ icons: [...current.icons, icon.id], activeIcon: icon.id });
       }
-      const completedPlayer = recordSolvedGame({ time: nextElapsed, mistakes: nextMistakes, hintsUsed: nextHints, date });
+      const progression = calculateProgressionReward(
+        {
+          difficulty: puzzle.difficulty,
+          time: nextElapsed,
+          mistakes: nextMistakes,
+          hintsUsed: nextHints,
+          streak: current.streak
+        },
+        current.xp ?? 0
+      );
+      const completedPlayer = recordSolvedGame({ time: nextElapsed, mistakes: nextMistakes, hintsUsed: nextHints, date, difficulty: puzzle.difficulty });
       const rewardBreakdown = shouldReward
         ? calculatePuzzleDiamondReward({
             difficulty: puzzle.difficulty,
             time: nextElapsed,
             mistakes: nextMistakes,
             streak: completedPlayer.streak,
-            isNewStreakDay: current.lastPlayedDate !== date
+            isNewStreakDay: current.lastPlayedDate !== date,
+            achievementUnlocked: (completedPlayer.achievements?.length ?? 0) > (current.achievements?.length ?? 0)
           })
         : { total: 0 };
       const diamondsEarned = rewardBreakdown.total;
-      if (diamondsEarned > 0) addDiamonds(diamondsEarned, date);
+      if (diamondsEarned > 0) addDiamonds(diamondsEarned);
       const updatedPlayer = getPlayer() ?? completedPlayer;
+      const rankChanged = (current.rank ?? "bronze-i") !== (updatedPlayer.rank ?? "bronze-i");
 
       setComplete(true);
       setReward(diamondsEarned);
+      setXpReward(progression.xp);
       setIconReward(icon);
+      setRankUpLabel(rankChanged ? rankLabel(updatedPlayer.rank ?? "bronze-i") : "");
+      setNeedsTitleReward(!current.firstTitleClaimed);
       setFinalOrnamentValue(finalValue ?? null);
       setCompletionOpen(true);
       setPlayer(updatedPlayer);
+      playFeedback(settings, rankChanged ? "rank-up" : "victory");
 
       if (mode === "daily") {
         submitLeaderboardResult({
@@ -320,30 +398,58 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
         });
       }
     },
-    [complete, given, mode, puzzle]
+    [complete, given, mode, puzzle, settings]
   );
 
   const placeNumber = useCallback(
     (value: number) => {
       if (!selected || !puzzle || locked || given[selected.row][selected.col]) return;
-      pushHistory();
 
       if (notesMode) {
+        pushHistory();
         const nextNotes = notes.map((row) => row.map((cell) => new Set(cell)));
         const cell = nextNotes[selected.row][selected.col];
         if (cell.has(value)) cell.delete(value);
         else cell.add(value);
         setNotes(nextNotes);
         persistDaily(board, nextNotes, false, elapsed, mistakes, hintsUsed);
+        playFeedback(settings, "tap");
         return;
       }
 
       const nextBoard = cloneBoard(board);
       const nextNotes = notes.map((row) => row.map((cell) => new Set(cell)));
-      const wasDifferent = nextBoard[selected.row][selected.col] !== value;
+      const previousValue = nextBoard[selected.row][selected.col];
+      const wasDifferent = previousValue !== value;
+      if (!wasDifferent) {
+        playFeedback(settings, "tap");
+        return;
+      }
+
+      pushHistory();
       nextBoard[selected.row][selected.col] = value;
       nextNotes[selected.row][selected.col].clear();
-      const nextMistakes = wasDifferent && value !== puzzle.solution[selected.row][selected.col] ? mistakes + 1 : mistakes;
+      const correct = value === puzzle.solution[selected.row][selected.col];
+      const nextMistakes = wasDifferent && !correct ? mistakes + 1 : mistakes;
+      const comboKey = keyOf(selected);
+      let nextCombo = comboStreak;
+
+      if (correct && !comboCells.has(comboKey)) {
+        nextCombo = comboStreak + 1;
+        setComboCells((current) => new Set(current).add(comboKey));
+        setComboStreak(nextCombo);
+        if (COMBO_MILESTONES[nextCombo]) {
+          setComboMessage(COMBO_MILESTONES[nextCombo]);
+          window.setTimeout(() => setComboMessage(""), 1200);
+        }
+      } else if (!correct) {
+        nextCombo = 0;
+        setComboStreak(0);
+        setComboMessage("");
+      }
+
+      if (!correct && wasDifferent) triggerScreenShake();
+      playFeedback(settings, correct ? (nextCombo >= 3 ? "combo" : "success") : "error");
 
       setBoard(nextBoard);
       setNotes(nextNotes);
@@ -351,7 +457,7 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
       persistDaily(nextBoard, nextNotes, false, elapsed, nextMistakes, hintsUsed);
       finishIfSolved(nextBoard, nextNotes, nextMistakes, hintsUsed, elapsed, value);
     },
-    [board, elapsed, finishIfSolved, given, hintsUsed, locked, mistakes, notes, notesMode, persistDaily, pushHistory, puzzle, selected]
+    [board, comboCells, comboStreak, elapsed, finishIfSolved, given, hintsUsed, locked, mistakes, notes, notesMode, persistDaily, pushHistory, puzzle, selected, settings, triggerScreenShake]
   );
 
   const eraseSelected = useCallback(() => {
@@ -363,8 +469,9 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
     nextNotes[selected.row][selected.col].clear();
     setBoard(nextBoard);
     setNotes(nextNotes);
+    playFeedback(settings, "tap");
     persistDaily(nextBoard, nextNotes, false, elapsed, mistakes, hintsUsed);
-  }, [board, elapsed, given, hintsUsed, locked, mistakes, notes, persistDaily, pushHistory, selected]);
+  }, [board, elapsed, given, hintsUsed, locked, mistakes, notes, persistDaily, pushHistory, selected, settings]);
 
   const undo = useCallback(() => {
     setHistory((current) => {
@@ -388,6 +495,9 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
     setHintsUsed(0);
     setElapsed(0);
     setComplete(false);
+    setComboStreak(0);
+    setComboMessage("");
+    setComboCells(new Set());
     setLeaderboardRank(null);
     setHistory([]);
     setSelected(firstEmpty(initialBoard, given));
@@ -498,7 +608,8 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
   }
 
   return (
-    <div className="mx-auto grid max-w-6xl gap-6 px-4 py-6 md:px-6 lg:px-8">
+    <div className={`mx-auto grid max-w-6xl gap-6 px-4 py-6 md:px-6 lg:px-8 ${shakeActive ? "screen-shake" : ""}`}>
+      {comboMessage ? <div className="combo-celebration">{comboMessage}</div> : null}
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <p className="text-sm font-bold uppercase tracking-wide text-primary">
@@ -511,6 +622,7 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
 
         <div className="flex flex-wrap items-center gap-2">
           <Timer seconds={elapsed} running={!complete} onTick={setElapsed} />
+          {comboStreak >= 2 ? <span className="combo-badge">Комбо x{comboStreak}</span> : null}
           <span className="badge-soft">Ошибки: {mistakes}</span>
           <span className="badge-soft">Подсказки: {hintsUsed}</span>
         </div>
@@ -554,6 +666,7 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
           complete={complete}
           locked={locked}
           ornamentMode={ornamentMode && canUseOrnaments}
+          numberStyle={settings.numberStyle ?? player?.numberStyle ?? "classic"}
           onSelect={(row, col) => setSelected({ row, col })}
           onOrnamentInfo={showOrnamentInfo}
         />
@@ -566,6 +679,7 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
             locked={locked}
             ornamentMode={ornamentMode && canUseOrnaments}
             canUseOrnament={canUseOrnaments}
+            numberStyle={settings.numberStyle ?? player?.numberStyle ?? "classic"}
             onNumber={placeNumber}
             onUndo={undo}
             onToggleNotes={() => setNotesMode((current) => !current)}
@@ -588,11 +702,19 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
               </div>
               <div className="stat-pill">
                 <span className="text-slate-500">Профиль</span>
-                <strong>{player?.plan === "diamond" ? "Diamond" : "Бесплатно"}</strong>
+                <strong>{player?.plan === "diamond" ? "💎" : "Бесплатно"}</strong>
               </div>
               <div className="stat-pill">
                 <span className="text-slate-500">Рейтинг</span>
                 <strong>{leaderboardRank ? `#${leaderboardRank}` : "—"}</strong>
+              </div>
+              <div className="stat-pill">
+                <span className="text-slate-500">Уровень</span>
+                <strong>{player?.level ?? 1}</strong>
+              </div>
+              <div className="stat-pill">
+                <span className="text-slate-500">Ранг</span>
+                <strong>{rankLabel(player?.rank ?? "bronze-i")}</strong>
               </div>
             </div>
           </section>
@@ -607,6 +729,8 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
         selectedCell={selected}
         difficulty={puzzle.difficulty}
         mistakes={mistakes}
+        elapsed={elapsed}
+        hintsUsed={hintsUsed}
         plan={player?.plan ?? "free"}
         onClose={() => setCoachOpen(false)}
         onLimit={() => setDiamondOpen(true)}
@@ -619,11 +743,18 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
         mistakes={mistakes}
         hintsUsed={hintsUsed}
         reward={reward}
+        xpReward={xpReward}
         iconReward={iconReward}
         rank={leaderboardRank}
+        rankUpLabel={rankUpLabel}
+        needsTitleReward={needsTitleReward}
         plan={player?.plan ?? "free"}
         onClose={() => setCompletionOpen(false)}
         onOpenDiamond={() => setDiamondOpen(true)}
+        onSaveTitle={(title) => {
+          setPlayer(updatePlayer({ title, firstTitleClaimed: true }));
+          setNeedsTitleReward(false);
+        }}
         ornamentMode={ornamentMode && canUseOrnaments}
         finalOrnament={finalOrnamentValue ? getOrnament(finalOrnamentValue) : null}
       />

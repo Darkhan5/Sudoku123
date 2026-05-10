@@ -12,8 +12,9 @@ import {
 describe("subscription access", () => {
   it("exposes only one premium subscription named Diamond", () => {
     assert.equal(DIAMOND_PLAN.id, "diamond");
-    assert.equal(DIAMOND_PLAN.name, "Diamond");
-    assert.deepEqual(DIAMOND_PLAN.features, ["Подсказки без лимита", "3 темы доски", "Режим Өрнек"]);
+    assert.equal(DIAMOND_PLAN.name, "Алмазная подписка");
+    assert.equal(DIAMOND_PLAN.priceMonthly, "2 500 тг/месяц");
+    assert.deepEqual(DIAMOND_PLAN.features, ["Эксклюзивные паки цифр", "Особые орнаменты", "Косметика профиля", "Дополнительные PvP-эффекты", "Будущие сезонные награды"]);
   });
 
   it("gives Diamond users unlimited AI Coach access", () => {
