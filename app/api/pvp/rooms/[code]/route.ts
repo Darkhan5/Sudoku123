@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import type { RoomState } from "@/lib/domain/arena";
-import { createPvpRoomStoreFromEnv, isValidRoomCode } from "@/lib/server/pvpRoomStore";
+import {
+  PVP_PERSISTENCE_ERROR,
+  createPvpRoomStoreFromEnv,
+  isPvpPersistenceMissingOnVercel,
+  isValidRoomCode
+} from "@/lib/server/pvpRoomStore";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +33,9 @@ export async function GET(_request: Request, { params }: { params: { code?: stri
   if (!isValidRoomCode(code)) {
     return NextResponse.json({ error: "Invalid PvP room code." }, { status: 400 });
   }
+  if (isPvpPersistenceMissingOnVercel()) {
+    return NextResponse.json({ error: PVP_PERSISTENCE_ERROR }, { status: 503 });
+  }
 
   const room = await store.read(code);
   if (!room) return NextResponse.json({ room: null }, { status: 404 });
@@ -38,6 +46,9 @@ export async function POST(request: Request, { params }: { params: { code?: stri
   const code = codeFromParams(params);
   if (!isValidRoomCode(code)) {
     return NextResponse.json({ error: "Invalid PvP room code." }, { status: 400 });
+  }
+  if (isPvpPersistenceMissingOnVercel()) {
+    return NextResponse.json({ error: PVP_PERSISTENCE_ERROR }, { status: 503 });
   }
 
   const payload = (await request.json().catch(() => null)) as Partial<RoomState> | null;

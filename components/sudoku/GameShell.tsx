@@ -129,6 +129,7 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
   const [coachRequestId, setCoachRequestId] = useState(0);
   const [gameSeed, setGameSeed] = useState(0);
   const [leaderboardRank, setLeaderboardRank] = useState<number | null>(null);
+  const [leaderboardNotice, setLeaderboardNotice] = useState("");
   const [ornamentMode, setOrnamentModeState] = useState(false);
   const [ornamentIntroOpen, setOrnamentIntroOpen] = useState(false);
   const [ornamentPreviewOpen, setOrnamentPreviewOpen] = useState(false);
@@ -192,6 +193,7 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
           setElapsed(saved.time);
           setComplete(saved.completed);
           setLeaderboardRank(null);
+          setLeaderboardNotice("");
           setComboStreak(0);
           setComboMessage("");
           setComboCells(new Set());
@@ -210,6 +212,7 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
         setElapsed(0);
         setComplete(false);
         setLeaderboardRank(null);
+        setLeaderboardNotice("");
         setComboStreak(0);
         setComboMessage("");
         setComboCells(new Set());
@@ -229,6 +232,7 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
       setElapsed(0);
       setComplete(false);
       setLeaderboardRank(null);
+      setLeaderboardNotice("");
       setHistory([]);
       setComboStreak(0);
       setComboMessage("");
@@ -373,6 +377,7 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
       playFeedback(settings, rankChanged ? "rank-up" : "victory");
 
       if (mode === "daily") {
+        setLeaderboardNotice("Сохраняем результат в рейтинг...");
         submitLeaderboardResult({
           player: updatedPlayer,
           date,
@@ -380,8 +385,14 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
           mistakes: nextMistakes,
           hintsUsed: nextHints
         })
-          .then((rank) => setLeaderboardRank(rank))
-          .catch(() => setLeaderboardRank(null));
+          .then((rank) => {
+            setLeaderboardRank(rank);
+            setLeaderboardNotice(rank ? "Результат сохранён в рейтинг." : "Рейтинг не вернул место игрока.");
+          })
+          .catch((error) => {
+            setLeaderboardRank(null);
+            setLeaderboardNotice(error instanceof Error ? error.message : "Не удалось сохранить результат в рейтинг.");
+          });
 
         saveDailyState({
           date,
@@ -499,6 +510,7 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
     setComboMessage("");
     setComboCells(new Set());
     setLeaderboardRank(null);
+    setLeaderboardNotice("");
     setHistory([]);
     setSelected(firstEmpty(initialBoard, given));
   }, [given, initialBoard, locked, puzzle]);
@@ -651,7 +663,7 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
         <div className="toolbar-band">
           <span className="font-semibold text-slate-700">Сегодня уже решено: {elapsed ? `${Math.floor(elapsed / 60)} мин ${elapsed % 60} сек` : "готово"}</span>
           <span className="text-sm text-slate-500">
-            {leaderboardRank ? `Место в общем рейтинге: #${leaderboardRank}` : "Результат сохранён в общий рейтинг"}
+            {leaderboardRank ? `Место во всемирном рейтинге: #${leaderboardRank}` : leaderboardNotice || "Результат сохранён в рейтинг"}
           </span>
         </div>
       ) : null}

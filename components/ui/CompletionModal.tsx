@@ -136,7 +136,7 @@ export function CompletionModal({
         </div>
 
         <p className="mt-4 text-sm font-semibold text-slate-700">
-          {rank ? `Место в общем рейтинге: #${rank}` : "Результат отправлен в общий рейтинг"}
+          {rank ? `Место во всемирном рейтинге: #${rank}` : "Результат отправлен в рейтинг"}
         </p>
 
         <div className="mt-5 flex flex-col gap-2">

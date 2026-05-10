@@ -7,7 +7,7 @@ import { DiamondModal } from "@/components/ui/DiamondModal";
 import { DiamondGlyph } from "@/components/ui/DiamondGlyph";
 import { NUMBER_PACKS, isNumberPackUnlocked } from "@/lib/domain/cosmetics";
 import { canUseTheme, getThemeCatalog } from "@/lib/domain/subscription";
-import { CITY_INPUT_AUTOCOMPLETE, COUNTRIES, getCountryCode } from "@/lib/domain/onboarding";
+import { CITY_INPUT_AUTOCOMPLETE } from "@/lib/domain/onboarding";
 import { spendDiamonds } from "@/lib/storage/economy";
 import { getPlayer, initPlayer, updatePlayer } from "@/lib/storage/player";
 import { getSettings, setAccessibilitySettings, setNumberStyle, setTheme } from "@/lib/storage/settings";
@@ -230,21 +230,6 @@ export default function ProfilePage() {
               value={player.age ?? ""}
               onChange={(event) => updateProfile({ age: Number(event.target.value) || undefined })}
             />
-          </label>
-
-          <label className="grid gap-2 text-sm font-semibold text-slate-700">
-            Страна
-            <select
-              className="select-control w-full"
-              value={player.country}
-              onChange={(event) => updateProfile({ country: event.target.value, countryCode: getCountryCode(event.target.value) ?? "KZ" })}
-            >
-              {COUNTRIES.map((country) => (
-                <option key={country.code} value={country.name}>
-                  {country.name}
-                </option>
-              ))}
-            </select>
           </label>
 
           <label className="grid gap-2 text-sm font-semibold text-slate-700">

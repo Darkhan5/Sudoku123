@@ -1,7 +1,8 @@
 import type { LeaderboardEntry, Player } from "@/types";
 import { getIconById } from "@/lib/data/icons";
+import { DEFAULT_COUNTRY, DEFAULT_COUNTRY_CODE } from "@/lib/domain/onboarding";
 
-export type LeaderboardTab = "kazakhstan" | "global";
+export type LeaderboardTab = "city" | "global";
 
 export interface LeaderboardResponse {
   entries: LeaderboardEntry[];
@@ -18,12 +19,16 @@ export interface SubmitLeaderboardResult {
   hintsUsed: number;
 }
 
-export async function fetchLeaderboard(tab: LeaderboardTab, playerId?: string): Promise<LeaderboardResponse> {
+export async function fetchLeaderboard(tab: LeaderboardTab, playerId?: string, city?: string): Promise<LeaderboardResponse> {
   const params = new URLSearchParams({ tab });
   if (playerId) params.set("playerId", playerId);
+  if (city) params.set("city", city);
 
   const response = await fetch(`/api/leaderboard?${params.toString()}`, { cache: "no-store" });
-  if (!response.ok) throw new Error("Не удалось загрузить рейтинг.");
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => ({}))) as { error?: string };
+    throw new Error(payload.error ?? "Не удалось загрузить рейтинг.");
+  }
   return (await response.json()) as LeaderboardResponse;
 }
 
@@ -35,8 +40,8 @@ export async function submitLeaderboardResult(result: SubmitLeaderboardResult): 
       playerId: result.player.id,
       name: result.player.name,
       city: result.player.city,
-      country: result.player.country,
-      countryCode: result.player.countryCode ?? "KZ",
+      country: result.player.country || DEFAULT_COUNTRY,
+      countryCode: result.player.countryCode ?? DEFAULT_COUNTRY_CODE,
       avatarUrl: result.player.avatarUrl ?? "",
       icon: getIconById(result.player.activeIcon).emoji,
       date: result.date,
@@ -46,7 +51,10 @@ export async function submitLeaderboardResult(result: SubmitLeaderboardResult): 
     })
   });
 
-  if (!response.ok) return null;
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => ({}))) as { error?: string };
+    throw new Error(payload.error ?? "Не удалось сохранить результат в рейтинг.");
+  }
   const payload = (await response.json()) as { rank?: number | null };
   return payload.rank ?? null;
 }

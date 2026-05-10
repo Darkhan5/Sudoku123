@@ -1,4 +1,4 @@
-export type LeaderboardScope = "kazakhstan" | "global";
+export type LeaderboardScope = "city" | "global";
 
 export interface LeaderboardScopeOption {
   id: LeaderboardScope;
@@ -30,12 +30,12 @@ export interface RankedLeaderboardRecord extends LeaderboardRecord {
 }
 
 export const LEADERBOARD_SCOPES: LeaderboardScopeOption[] = [
-  { id: "kazakhstan", label: "Казахстан" },
-  { id: "global", label: "Общий" }
+  { id: "city", label: "Город" },
+  { id: "global", label: "Всемирный" }
 ];
 
 export function isLeaderboardScope(value: string | null): value is LeaderboardScope {
-  return value === "kazakhstan" || value === "global";
+  return value === "city" || value === "global";
 }
 
 export function countryFlag(countryCode: string): string {
@@ -45,7 +45,9 @@ export function countryFlag(countryCode: string): string {
 }
 
 export function accuracyFor(mistakes: number, hintsUsed: number): number {
-  return Math.max(0, Math.min(100, 100 - mistakes * 12 - hintsUsed * 4));
+  const solvedCells = 81;
+  const cleanCells = solvedCells - mistakes - hintsUsed * 2;
+  return Math.max(0, Math.min(100, Math.round((cleanCells / solvedCells) * 100)));
 }
 
 export function scoreFor(time: number, mistakes: number, hintsUsed: number): number {
@@ -64,12 +66,11 @@ export function rankLeaderboard(entries: LeaderboardRecord[]): RankedLeaderboard
     }));
 }
 
-export function filterLeaderboard(entries: LeaderboardRecord[], scope: LeaderboardScope): LeaderboardRecord[] {
-  if (scope === "kazakhstan") {
-    return entries.filter((entry) => {
-      const country = entry.country.toLowerCase();
-      return entry.countryCode.toUpperCase() === "KZ" || country === "kazakhstan" || country === "казахстан";
-    });
+export function filterLeaderboard(entries: LeaderboardRecord[], scope: LeaderboardScope, city = ""): LeaderboardRecord[] {
+  if (scope === "city") {
+    const normalizedCity = city.trim().toLowerCase();
+    if (!normalizedCity) return [];
+    return entries.filter((entry) => entry.city.trim().toLowerCase() === normalizedCity);
   }
 
   return entries;

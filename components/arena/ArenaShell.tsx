@@ -103,35 +103,41 @@ function readRoom(code: string): RoomState | null {
 }
 
 async function readRoomFromServer(code: string): Promise<RoomState | null> {
-  try {
-    const response = await fetch(`/api/pvp/rooms/${encodeURIComponent(code)}`, { cache: "no-store" });
-    if (response.status === 404) return null;
-    if (!response.ok) throw new Error("PvP room request failed.");
-    const payload = (await response.json()) as { room?: RoomState | null };
-    return payload.room ?? null;
-  } catch {
-    return readRoom(code);
-  }
+  const response = await fetch(`/api/pvp/rooms/${encodeURIComponent(code)}`, { cache: "no-store" });
+  if (response.status === 404) return null;
+  const payload = (await response.json().catch(() => ({}))) as { room?: RoomState | null; error?: string };
+  if (!response.ok) throw new Error(payload.error ?? "PvP room request failed.");
+  return payload.room ?? null;
 }
 
-async function writeRoomToServer(room: RoomState): Promise<void> {
-  try {
-    await fetch(`/api/pvp/rooms/${encodeURIComponent(room.code)}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(room)
-    });
-  } catch {
-    // Keep the local room usable even when the network sync is temporarily unavailable.
-  }
+function cacheRoom(room: RoomState): RoomState {
+  const next = { ...room, updatedAt: Date.now() };
+  if (hasStorage()) localStorage.setItem(roomKey(room.code), JSON.stringify(next));
+  return next;
+}
+
+async function writeRoomToServer(room: RoomState): Promise<RoomState | null> {
+  const response = await fetch(`/api/pvp/rooms/${encodeURIComponent(room.code)}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(room)
+  });
+  const payload = (await response.json().catch(() => ({}))) as { room?: RoomState | null; error?: string };
+  if (!response.ok) throw new Error(payload.error ?? "PvP room sync failed.");
+  return payload.room ?? null;
+}
+
+async function saveRoom(room: RoomState): Promise<RoomState> {
+  const cached = cacheRoom(room);
+  const serverRoom = await writeRoomToServer(cached);
+  return cacheRoom(serverRoom ?? cached);
 }
 
 function writeRoom(room: RoomState): RoomState {
-  const next = { ...room, updatedAt: Date.now() };
-  if (hasStorage()) localStorage.setItem(roomKey(room.code), JSON.stringify(next));
-  void writeRoomToServer(next);
+  const next = cacheRoom(room);
+  void writeRoomToServer(next).catch(() => undefined);
   return next;
 }
 
@@ -192,7 +198,8 @@ export function ArenaShell() {
   const [lastIncomingEffect, setLastIncomingEffect] = useState("");
   const [player, setPlayer] = useState<Player>(() => getPlayer() ?? initPlayer());
 
-  const inviteLink = typeof window === "undefined" ? `sudoku.app/pvp/${code}` : `${window.location.origin}/pvp/${code}`;
+  const siteOrigin = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? (typeof window === "undefined" ? "" : window.location.origin);
+  const inviteLink = `${siteOrigin || "https://sudoku.app"}/pvp/${code}`;
   const playerProgress = calculateBoardProgress({ board, given: puzzle.given });
   const friend = role === "host" ? room?.guest : room?.host;
   const friendConnected = Boolean(friend);
@@ -252,6 +259,8 @@ export function ArenaShell() {
       if (!serverRoom) return;
       if (hasStorage()) localStorage.setItem(roomKey(code), JSON.stringify(serverRoom));
       setRoom(serverRoom);
+    }).catch((error) => {
+      setStatus(error instanceof Error ? error.message : "PvP временно недоступен.");
     });
   }, [code]);
 
@@ -281,38 +290,56 @@ export function ArenaShell() {
       const currentPlayer = getPlayer() ?? initPlayer();
       const ownedByHost = hasStorage() && localStorage.getItem(ownerKey(safeRouteCode)) === "host";
       const nextRole: PlayerRole = ownedByHost ? "host" : "guest";
-      const existing = (await readRoomFromServer(safeRouteCode)) ?? readRoom(safeRouteCode);
-      const seed = existing?.seed ?? `pvp:${safeRouteCode}:0`;
-      const nextRoom = existing
-        ? writeRoom({
-            ...existing,
-            [nextRole]: participantFromPlayer(currentPlayer)
-          })
-        : writeRoom({
-            code: safeRouteCode,
-            seed,
-            guest: nextRole === "guest" ? participantFromPlayer(currentPlayer) : undefined,
-            host: nextRole === "host" ? participantFromPlayer(currentPlayer) : undefined,
-            hostReady: false,
-            guestReady: false,
-            hostProgress: 0,
-            guestProgress: 0,
-            hostFinished: false,
-            guestFinished: false,
-            updatedAt: Date.now()
-      });
+      try {
+        const serverRoom = await readRoomFromServer(safeRouteCode);
+        const localRoom = readRoom(safeRouteCode);
+        const existing = serverRoom ?? (ownedByHost ? localRoom : null);
 
-      if (cancelled) return;
-      setCode(safeRouteCode);
-      setRole(nextRole);
-      setRoom(nextRoom);
-      resetMatch(seed);
-      setMatchState(nextRoom.host && nextRoom.guest ? "ready" : "waiting");
-      setStatus(
-        nextRoom.host && nextRoom.guest
-          ? "Друг подключён. Оба игрока могут нажать «Готов»."
-          : "Комната открыта по ссылке. Ждём второго игрока."
-      );
+        if (!existing && !ownedByHost) {
+          if (cancelled) return;
+          setCode(safeRouteCode);
+          setRole("guest");
+          setRoom(null);
+          setMatchState("waiting");
+          setStatus("Комната не найдена. Попроси друга создать PvP заново и отправить новую ссылку.");
+          return;
+        }
+
+        const seed = existing?.seed ?? `pvp:${safeRouteCode}:0`;
+        const nextRoom = existing
+          ? await saveRoom({
+              ...existing,
+              [nextRole]: participantFromPlayer(currentPlayer)
+            })
+          : await saveRoom({
+              code: safeRouteCode,
+              seed,
+              guest: nextRole === "guest" ? participantFromPlayer(currentPlayer) : undefined,
+              host: nextRole === "host" ? participantFromPlayer(currentPlayer) : undefined,
+              hostReady: false,
+              guestReady: false,
+              hostProgress: 0,
+              guestProgress: 0,
+              hostFinished: false,
+              guestFinished: false,
+              updatedAt: Date.now()
+            });
+
+        if (cancelled) return;
+        setCode(safeRouteCode);
+        setRole(nextRole);
+        setRoom(nextRoom);
+        resetMatch(seed);
+        setMatchState(nextRoom.host && nextRoom.guest ? "ready" : "waiting");
+        setStatus(
+          nextRoom.host && nextRoom.guest
+            ? "Друг подключён. Оба игрока могут нажать «Готов»."
+            : "Комната открыта по ссылке. Ждём второго игрока."
+        );
+      } catch (error) {
+        if (cancelled) return;
+        setStatus(error instanceof Error ? error.message : "Не удалось открыть PvP-комнату.");
+      }
     }
 
     void openRoom();
@@ -455,16 +482,22 @@ export function ArenaShell() {
     playFeedback(settings, won ? "victory" : "sabotage");
   }, [elapsed, matchState, mistakes, player, puzzle.difficulty, rewardGranted, settings, winner]);
 
-  function createLobby() {
+  async function createLobby() {
     const currentPlayer = getPlayer() ?? initPlayer();
-    const nextRoom = writeRoom(createRoom(code, currentPlayer));
-    if (hasStorage()) localStorage.setItem(ownerKey(code), "host");
-    setPlayer(currentPlayer);
-    setRole("host");
-    setRoom(nextRoom);
-    resetMatch(nextRoom.seed);
-    setMatchState("waiting");
-    setStatus("Комната создана. Скопируй ссылку и отправь её другу.");
+    setStatus("Создаём комнату...");
+
+    try {
+      const nextRoom = await saveRoom(createRoom(code, currentPlayer));
+      if (hasStorage()) localStorage.setItem(ownerKey(code), "host");
+      setPlayer(currentPlayer);
+      setRole("host");
+      setRoom(nextRoom);
+      resetMatch(nextRoom.seed);
+      setMatchState("waiting");
+      setStatus("Комната создана. Скопируй ссылку и отправь её другу.");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Не удалось создать PvP-комнату.");
+    }
   }
 
   function copyInvite() {

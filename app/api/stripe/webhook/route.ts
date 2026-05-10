@@ -8,7 +8,7 @@ export const runtime = "nodejs";
 export async function POST(request: Request) {
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
   if (!webhookSecret) {
-    return NextResponse.json({ error: "Stripe webhook is not configured. Add STRIPE_WEBHOOK_SECRET to .env.local." }, { status: 503 });
+    return NextResponse.json({ error: "Stripe webhook is not configured. Add STRIPE_WEBHOOK_SECRET to .env.local locally or Vercel Environment Variables in production." }, { status: 503 });
   }
 
   const rawBody = await request.text();

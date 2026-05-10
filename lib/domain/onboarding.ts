@@ -25,8 +25,11 @@ export type OnboardingResult =
   | { ok: false; errors: OnboardingErrors };
 
 export const CITY_INPUT_AUTOCOMPLETE = "off";
+export const DEFAULT_COUNTRY = "Всемирный";
+export const DEFAULT_COUNTRY_CODE = "UN";
 
 export const COUNTRIES: CountryOption[] = [
+  { name: DEFAULT_COUNTRY, code: DEFAULT_COUNTRY_CODE, aliases: ["Global", "World"] },
   { name: "Казахстан", code: "KZ", aliases: ["Kazakhstan"] },
   { name: "США", code: "US", aliases: ["United States"] },
   { name: "Канада", code: "CA", aliases: ["Canada"] },
@@ -59,7 +62,8 @@ export function normalizeCountryName(countryName: string): string {
 
 export function validateOnboarding(input: OnboardingInput): OnboardingResult {
   const name = typeof input.name === "string" ? input.name.trim() : "";
-  const country = typeof input.country === "string" ? input.country.trim() : "";
+  const rawCountry = typeof input.country === "string" && input.country.trim() ? input.country.trim() : DEFAULT_COUNTRY;
+  const country = getCountryCode(rawCountry) ? rawCountry : DEFAULT_COUNTRY;
   const city = typeof input.city === "string" ? input.city.trim() : "";
   const ageValue = typeof input.age === "number" ? input.age : Number(input.age);
   const errors: OnboardingErrors = {};
@@ -67,15 +71,14 @@ export function validateOnboarding(input: OnboardingInput): OnboardingResult {
   if (name.length < 2) errors.name = "Имя должно быть не короче 2 символов.";
   if (!Number.isInteger(ageValue) || ageValue < 13 || ageValue > 120) errors.age = "Возраст должен быть от 13 до 120.";
 
-  const countryCode = getCountryCode(country);
-  if (!countryCode) errors.country = "Выбери страну из списка.";
+  const countryCode = getCountryCode(country) ?? DEFAULT_COUNTRY_CODE;
   if (!city) errors.city = "Город обязателен.";
 
   if (Object.keys(errors).length > 0) return { ok: false, errors };
 
   return {
     ok: true,
-    countryCode: countryCode!,
+    countryCode,
     profile: {
       name,
       age: ageValue,

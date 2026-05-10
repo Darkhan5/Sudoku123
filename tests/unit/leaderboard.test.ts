@@ -25,10 +25,10 @@ const baseEntry = {
 };
 
 describe("global leaderboard logic", () => {
-  it("supports only Kazakhstan and Global scopes", () => {
+  it("supports only city and global scopes", () => {
     assert.deepEqual(
       LEADERBOARD_SCOPES.map((scope) => scope.id),
-      ["kazakhstan", "global"]
+      ["city", "global"]
     );
   });
 
@@ -49,15 +49,15 @@ describe("global leaderboard logic", () => {
     );
   });
 
-  it("filters Kazakhstan without any city-specific leaderboard", () => {
+  it("filters the player's city without using countries", () => {
     const entries = [
       baseEntry,
-      { ...baseEntry, playerId: "user-2", country: "Канада", countryCode: "CA" }
+      { ...baseEntry, playerId: "user-2", city: "Алматы", country: "Канада", countryCode: "CA" }
     ];
 
     assert.equal(filterLeaderboard(entries, "global").length, 2);
     assert.deepEqual(
-      filterLeaderboard(entries, "kazakhstan").map((entry) => entry.playerId),
+      filterLeaderboard(entries, "city", "Астана").map((entry) => entry.playerId),
       ["user-1"]
     );
   });

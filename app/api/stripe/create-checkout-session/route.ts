@@ -94,7 +94,7 @@ export async function POST(request: Request) {
   const secretKey = process.env.STRIPE_SECRET_KEY;
 
   if (!secretKey) {
-    return NextResponse.json({ error: "Stripe demo is not configured. Add STRIPE_SECRET_KEY to .env.local." }, { status: 503 });
+    return NextResponse.json({ error: "Stripe is not configured. Add STRIPE_SECRET_KEY to .env.local locally or Vercel Environment Variables in production." }, { status: 503 });
   }
 
   const checkoutRequest = await readCheckoutRequest(request);
@@ -121,7 +121,7 @@ export async function POST(request: Request) {
       const configuredPriceId = process.env[envName];
 
       if (!configuredPriceId) {
-        return NextResponse.json({ error: `Stripe pack is not configured. Add ${envName} to .env.local.` }, { status: 503 });
+        return NextResponse.json({ error: `Stripe pack is not configured. Add ${envName} to .env.local locally or Vercel Environment Variables in production.` }, { status: 503 });
       }
 
       checkoutPriceId = await resolvePriceId(secretKey, configuredPriceId, false);
@@ -135,7 +135,7 @@ export async function POST(request: Request) {
       if (!configuredPriceId) {
         return NextResponse.json(
           {
-            error: "Stripe subscription is not configured. Add STRIPE_DIAMOND_PRICE_ID to .env.local."
+            error: "Stripe subscription is not configured. Add STRIPE_DIAMOND_PRICE_ID to .env.local locally or Vercel Environment Variables in production."
           },
           { status: 503 }
         );

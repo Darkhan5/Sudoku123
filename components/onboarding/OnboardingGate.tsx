@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { CITY_INPUT_AUTOCOMPLETE, COUNTRIES, validateOnboarding } from "@/lib/domain/onboarding";
+import { CITY_INPUT_AUTOCOMPLETE, validateOnboarding } from "@/lib/domain/onboarding";
 import { createOnboardedPlayer, getPlayer, savePlayer } from "@/lib/storage/player";
 
 interface OnboardingGateProps {
@@ -11,13 +11,12 @@ interface OnboardingGateProps {
 export function OnboardingGate({ onComplete }: OnboardingGateProps) {
   const [name, setName] = useState("");
   const [age, setAge] = useState("");
-  const [country, setCountry] = useState("Казахстан");
   const [city, setCity] = useState("");
   const [error, setError] = useState("");
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const result = validateOnboarding({ name, age: Number(age), country, city });
+    const result = validateOnboarding({ name, age: Number(age), city });
     if (!result.ok) {
       setError(Object.values(result.errors).join(" "));
       return;
@@ -34,7 +33,7 @@ export function OnboardingGate({ onComplete }: OnboardingGateProps) {
           <p className="text-sm font-bold uppercase tracking-wide text-cyan-300">Судоку</p>
           <h1 className="max-w-2xl text-4xl font-black leading-tight md:text-6xl">Создай профиль игрока</h1>
           <p className="max-w-xl text-base leading-7 text-slate-300">
-            Имя, страна, город и возраст нужны для локального профиля и рейтинга.
+            Имя, город и возраст нужны для локального профиля и рейтинга.
           </p>
         </section>
 
@@ -47,17 +46,6 @@ export function OnboardingGate({ onComplete }: OnboardingGateProps) {
           <label className="grid gap-2 text-sm font-bold text-slate-700">
             Возраст
             <input className="input-control" type="number" min={13} max={120} value={age} onChange={(event) => setAge(event.target.value)} />
-          </label>
-
-          <label className="grid gap-2 text-sm font-bold text-slate-700">
-            Страна
-            <select className="select-control w-full" value={country} onChange={(event) => setCountry(event.target.value)}>
-              {COUNTRIES.map((item) => (
-                <option key={item.code} value={item.name}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
           </label>
 
           <label className="grid gap-2 text-sm font-bold text-slate-700">

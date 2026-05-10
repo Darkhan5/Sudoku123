@@ -1,4 +1,5 @@
 import { promises as fs } from "fs";
+import os from "os";
 import path from "path";
 import { getDiamondStorePack, getDiamondStorePackTotalDiamonds, type DiamondStorePackId } from "../domain/economy";
 import type { Plan } from "../../types";
@@ -53,7 +54,7 @@ export interface FulfillmentResult {
   reason?: string;
 }
 
-const DATA_DIR = path.join(process.cwd(), ".data");
+const DATA_DIR = process.env.VERCEL ? path.join(os.tmpdir(), "sudoku-league") : path.join(process.cwd(), ".data");
 const DATA_FILE = path.join(DATA_DIR, "stripe-customers.json");
 
 function normalizeEmail(value?: string | null): string {

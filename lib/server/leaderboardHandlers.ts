@@ -9,7 +9,7 @@ import {
   upsertLeaderboardEntry,
   type LeaderboardRecord
 } from "../domain/leaderboard";
-import { getCountryCode } from "../domain/onboarding";
+import { DEFAULT_COUNTRY, DEFAULT_COUNTRY_CODE, getCountryCode } from "../domain/onboarding";
 
 export interface LeaderboardStore {
   read(): Promise<LeaderboardRecord[]>;
@@ -55,6 +55,8 @@ interface SupabaseLeaderboardRow {
 
 const DATA_DIR = path.join(process.cwd(), ".data");
 const DATA_FILE = path.join(DATA_DIR, "leaderboard.json");
+const PERSISTENCE_ERROR =
+  "Рейтинг на Vercel требует Supabase. Добавь SUPABASE_URL и SUPABASE_SERVICE_ROLE_KEY в Vercel Environment Variables.";
 
 function jsonResponse(payload: unknown, init?: ResponseInit): Response {
   return new Response(JSON.stringify(payload), {
@@ -79,13 +81,25 @@ function asInteger(value: unknown): number | null {
   return Number.isInteger(parsed) ? parsed : null;
 }
 
+function isVercelRuntime(): boolean {
+  return process.env.VERCEL === "1" || Boolean(process.env.VERCEL_URL);
+}
+
+function hasSupabaseConfig(): boolean {
+  return Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
+}
+
+export function isLeaderboardPersistenceMissingOnVercel(): boolean {
+  return isVercelRuntime() && !hasSupabaseConfig();
+}
+
 function parseSubmitPayload(payload: SubmitPayload, now: Date): LeaderboardRecord | null {
   const playerId = asString(payload.playerId);
   const name = asString(payload.name);
   const city = asString(payload.city);
-  const country = asString(payload.country);
+  const country = asString(payload.country) || DEFAULT_COUNTRY;
   const explicitCountryCode = asString(payload.countryCode).toUpperCase();
-  const countryCode = explicitCountryCode || getCountryCode(country) || "";
+  const countryCode = explicitCountryCode || getCountryCode(country) || DEFAULT_COUNTRY_CODE;
   const avatarUrl = asString(payload.avatarUrl);
   const icon = asString(payload.icon) || "🧠";
   const date = asString(payload.date);
@@ -93,7 +107,7 @@ function parseSubmitPayload(payload: SubmitPayload, now: Date): LeaderboardRecor
   const mistakes = asInteger(payload.mistakes);
   const hintsUsed = asInteger(payload.hintsUsed);
 
-  if (!playerId || !name || !city || !country || !countryCode || !date || !time || time <= 0 || mistakes === null || mistakes < 0 || hintsUsed === null || hintsUsed < 0) {
+  if (!playerId || !name || !city || !date || !time || time <= 0 || mistakes === null || mistakes < 0 || hintsUsed === null || hintsUsed < 0) {
     return null;
   }
 
@@ -224,10 +238,14 @@ export function createLeaderboardHandlers({ store, now = () => new Date() }: Lea
       if (!isLeaderboardScope(tab)) {
         return jsonResponse({ error: "Unsupported leaderboard scope." }, { status: 400 });
       }
+      if (isLeaderboardPersistenceMissingOnVercel()) {
+        return jsonResponse({ error: PERSISTENCE_ERROR }, { status: 503 });
+      }
 
       const playerId = url.searchParams.get("playerId");
+      const city = asString(url.searchParams.get("city"));
       const entries = await store.read();
-      const ranked = rankLeaderboard(filterLeaderboard(entries, tab));
+      const ranked = rankLeaderboard(filterLeaderboard(entries, tab, city));
       const current = playerId ? ranked.find((entry) => entry.playerId === playerId) : null;
 
       return jsonResponse({
@@ -243,6 +261,10 @@ export function createLeaderboardHandlers({ store, now = () => new Date() }: Lea
 
     async POST(req: Request): Promise<Response> {
       try {
+        if (isLeaderboardPersistenceMissingOnVercel()) {
+          return jsonResponse({ error: PERSISTENCE_ERROR }, { status: 503 });
+        }
+
         const payload = (await req.json()) as SubmitPayload;
         const entry = parseSubmitPayload(payload, now());
         if (!entry) {

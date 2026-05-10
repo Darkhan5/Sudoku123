@@ -15,6 +15,8 @@ interface SupabaseRoomRecord {
 
 const DATA_DIR = path.join(process.cwd(), ".data");
 const DATA_FILE = path.join(DATA_DIR, "pvp-rooms.json");
+export const PVP_PERSISTENCE_ERROR =
+  "PvP на Vercel требует Supabase. Добавь SUPABASE_URL и SUPABASE_SERVICE_ROLE_KEY в Vercel Environment Variables.";
 
 function normalizeCode(code: string): string {
   return code.trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
@@ -22,6 +24,18 @@ function normalizeCode(code: string): string {
 
 export function isValidRoomCode(code: string): boolean {
   return /^[A-Z0-9]{4,8}$/.test(normalizeCode(code));
+}
+
+function isVercelRuntime(): boolean {
+  return process.env.VERCEL === "1" || Boolean(process.env.VERCEL_URL);
+}
+
+function hasSupabaseConfig(): boolean {
+  return Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
+}
+
+export function isPvpPersistenceMissingOnVercel(): boolean {
+  return isVercelRuntime() && !hasSupabaseConfig();
 }
 
 export function createFilePvpRoomStore(filePath = DATA_FILE): PvpRoomStore {

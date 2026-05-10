@@ -5,7 +5,6 @@
 import type { Player } from "@/types";
 import { formatTime } from "@/lib/utils/date";
 import { getIconById } from "@/lib/data/icons";
-import { countryFlag } from "@/lib/domain/leaderboard";
 import { rankLabel, rankProgressPercent, xpUntilNextRank } from "@/lib/domain/progression";
 import { DiamondGlyph } from "@/components/ui/DiamondGlyph";
 
@@ -15,7 +14,6 @@ interface PlayerCardProps {
 
 export function PlayerCard({ player }: PlayerCardProps) {
   const activeIcon = getIconById(player.activeIcon);
-  const flag = countryFlag(player.countryCode ?? "KZ");
   const xp = player.xp ?? 0;
   const rank = player.rank ?? "bronze-i";
   const xpLeft = xpUntilNextRank(xp);
@@ -44,9 +42,7 @@ export function PlayerCard({ player }: PlayerCardProps) {
           <span className="rank-badge">{rankLabel(rank)}</span>
         </div>
         <p className="mt-1 text-sm font-semibold text-slate-600">{player.title ?? "Титул откроется после первой игры"}</p>
-        <p className="mt-1 text-sm text-slate-500">
-          {flag} {player.city}, {player.country}
-        </p>
+        <p className="mt-1 text-sm text-slate-500">{player.city || "Город не указан"}</p>
         <div className="mt-3">
           <div className="flex items-center justify-between text-xs font-bold text-slate-500">
             <span>{rankLabel(rank)}</span>

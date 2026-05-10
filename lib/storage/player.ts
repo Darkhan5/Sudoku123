@@ -2,7 +2,8 @@ import type { Difficulty, NumberStyle, Player } from "@/types";
 import { calculateProgressionReward, mergeAchievements, rankForXp } from "@/lib/domain/progression";
 import { normalizePlayedDates } from "@/lib/domain/streak";
 import { safeJsonParse, todayIso, yesterdayIso } from "@/lib/utils/date";
-import { getCountryCode, normalizeCountryName, type OnboardingProfile } from "@/lib/domain/onboarding";
+import { DEFAULT_COUNTRY, DEFAULT_COUNTRY_CODE, getCountryCode, normalizeCountryName, type OnboardingProfile } from "@/lib/domain/onboarding";
+import { accuracyFor } from "@/lib/domain/leaderboard";
 
 const PLAYER_KEY = "sl_player";
 
@@ -49,21 +50,21 @@ export function getPlayer(): Player | null {
   if (!hasStorage()) return null;
   const player = safeJsonParse<Player | null>(localStorage.getItem(PLAYER_KEY), null);
   if (!player) return null;
-  const country = normalizeCountryName(player.country);
+  const country = normalizeCountryName(player.country || DEFAULT_COUNTRY);
   return withPlayerDefaults({
     ...player,
     country,
-    countryCode: getCountryCode(country) ?? player.countryCode
+    countryCode: getCountryCode(country) ?? player.countryCode ?? DEFAULT_COUNTRY_CODE
   });
 }
 
 export function savePlayer(player: Player): Player {
   if (!hasStorage()) return player;
-  const country = normalizeCountryName(player.country);
+  const country = normalizeCountryName(player.country || DEFAULT_COUNTRY);
   const normalized = withPlayerDefaults({
     ...player,
     country,
-    countryCode: getCountryCode(country) ?? player.countryCode
+    countryCode: getCountryCode(country) ?? player.countryCode ?? DEFAULT_COUNTRY_CODE
   });
   localStorage.setItem(PLAYER_KEY, JSON.stringify(normalized));
   emitPlayerUpdate();
@@ -77,8 +78,8 @@ export function initPlayer(name = "Игрок", city = "Астана"): Player {
   return savePlayer({
     id: crypto.randomUUID(),
     name,
-    country: "Казахстан",
-    countryCode: "KZ",
+    country: DEFAULT_COUNTRY,
+    countryCode: DEFAULT_COUNTRY_CODE,
     city,
     onboarded: false,
     plan: "free",
@@ -104,7 +105,7 @@ export function initPlayer(name = "Игрок", city = "Астана"): Player {
 }
 
 export function isPlayerOnboarded(player: Player | null): player is Player {
-  return Boolean(player?.onboarded && player.name.trim() && player.country.trim() && player.city.trim() && player.age);
+  return Boolean(player?.onboarded && player.name.trim() && player.city.trim() && player.age);
 }
 
 export function createOnboardedPlayer(profile: OnboardingProfile, current: Player | null = getPlayer()): Player {
@@ -133,8 +134,8 @@ export function createOnboardedPlayer(profile: OnboardingProfile, current: Playe
     }),
     name: profile.name,
     age: profile.age,
-    country: profile.country,
-    countryCode: getCountryCode(profile.country) ?? "KZ",
+    country: profile.country || DEFAULT_COUNTRY,
+    countryCode: getCountryCode(profile.country) ?? DEFAULT_COUNTRY_CODE,
     city: profile.city,
     onboarded: true
   };
@@ -150,7 +151,7 @@ export function recordSolvedGame(params: { time: number; mistakes: number; hints
   const date = params.date ?? todayIso();
   const solved = player.totalSolved + 1;
   const avgTime = Math.round((player.avgTime * player.totalSolved + params.time) / solved);
-  const gameAccuracy = Math.max(0, 100 - params.mistakes * 12 - params.hintsUsed * 4);
+  const gameAccuracy = accuracyFor(params.mistakes, params.hintsUsed);
   const accuracy = Math.round((player.accuracy * player.totalSolved + gameAccuracy) / solved);
 
   let streak = 1;

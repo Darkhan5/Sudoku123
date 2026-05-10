@@ -33,7 +33,7 @@ export async function GET(request: Request) {
   const sessionId = new URL(request.url).searchParams.get("session_id");
 
   if (!secretKey) {
-    return NextResponse.json({ error: "Stripe demo is not configured. Add STRIPE_SECRET_KEY to .env.local." }, { status: 503 });
+    return NextResponse.json({ error: "Stripe is not configured. Add STRIPE_SECRET_KEY to .env.local locally or Vercel Environment Variables in production." }, { status: 503 });
   }
 
   if (!sessionId) {
@@ -53,7 +53,19 @@ export async function GET(request: Request) {
   }
 
   const pack = payload.metadata?.purchase === "diamond_pack" ? getDiamondStorePack(payload.metadata.packId) : undefined;
-  const fulfillment = payload.status === "complete" ? await fulfillCheckoutSession(payload) : null;
+  let fulfillment: Awaited<ReturnType<typeof fulfillCheckoutSession>> | null = null;
+  if (payload.status === "complete") {
+    try {
+      fulfillment = await fulfillCheckoutSession(payload);
+    } catch (error) {
+      console.error("Stripe session fulfillment error:", error);
+      fulfillment = {
+        fulfilled: false,
+        alreadyProcessed: false,
+        reason: "Оплата прошла, но серверная запись не сохранилась. Локальный профиль всё равно будет обновлён."
+      };
+    }
+  }
 
   return NextResponse.json({
     status: payload.status,

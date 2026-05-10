@@ -51,14 +51,33 @@ describe("leaderboard API integration", () => {
     assert.equal(payload.entries[0].countryFlag, "🇰🇿");
   });
 
-  it("rejects city-specific leaderboard tabs", async () => {
+  it("returns city leaderboard entries for the requested city", async () => {
     const handlers = createLeaderboardHandlers({
       store: createMemoryStore(),
       now: () => new Date("2026-05-09T10:00:00.000Z")
     });
 
-    const response = await handlers.GET(new Request("http://localhost/api/leaderboard?tab=city"));
+    await handlers.POST(
+      new Request("http://localhost/api/leaderboard", {
+        method: "POST",
+        body: JSON.stringify({
+          playerId: "user-1",
+          name: "Ayan",
+          country: "Всемирный",
+          countryCode: "UN",
+          city: "Астана",
+          date: "2026-05-09",
+          time: 300,
+          mistakes: 0,
+          hintsUsed: 0
+        })
+      })
+    );
 
-    assert.equal(response.status, 400);
+    const response = await handlers.GET(new Request("http://localhost/api/leaderboard?tab=city&city=%D0%90%D1%81%D1%82%D0%B0%D0%BD%D0%B0"));
+    const payload = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.equal(payload.entries.length, 1);
   });
 });
