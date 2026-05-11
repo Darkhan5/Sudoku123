@@ -27,6 +27,10 @@ interface CompletionModalProps {
   onOpenDiamond: () => void;
 }
 
+function hasSudokuPass(plan: Plan): boolean {
+  return plan === "diamond" || plan === "sudoku-pass";
+}
+
 export function CompletionModal({
   open,
   time,
@@ -47,12 +51,33 @@ export function CompletionModal({
   onOpenDiamond
 }: CompletionModalProps) {
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [detailsRequested, setDetailsRequested] = useState(false);
+  const detailsAllowed = hasSudokuPass(plan);
 
   useEffect(() => {
-    if (open) setDetailsOpen(false);
+    if (open) {
+      setDetailsOpen(false);
+      setDetailsRequested(false);
+    }
   }, [open]);
 
+  useEffect(() => {
+    if (!open || !detailsRequested || !detailsAllowed || !report) return;
+    setDetailsOpen(true);
+    setDetailsRequested(false);
+  }, [detailsAllowed, detailsRequested, open, report]);
+
   if (!open) return null;
+
+  function openDetails() {
+    if (detailsAllowed) {
+      setDetailsOpen(true);
+      return;
+    }
+
+    setDetailsRequested(true);
+    onOpenDiamond();
+  }
 
   function shareOrnamentResult() {
     const text = finalOrnament
@@ -87,7 +112,7 @@ export function CompletionModal({
             <>
               {report ? (
                 <div className="mt-5">
-                  <GameReviewSummary report={report} onOpenDetails={() => setDetailsOpen(true)} />
+                  <GameReviewSummary report={report} onOpenDetails={openDetails} detailsLocked={!detailsAllowed} />
                 </div>
               ) : null}
 
@@ -165,7 +190,7 @@ export function CompletionModal({
           ) : null}
           {plan === "free" ? (
             <button type="button" className="btn-secondary" onClick={onOpenDiamond}>
-              Купить план
+              Купить Судоку Пасс
             </button>
           ) : null}
           {ornamentMode ? (

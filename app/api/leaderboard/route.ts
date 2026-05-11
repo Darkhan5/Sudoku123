@@ -3,7 +3,8 @@ import { createLeaderboardHandlers, createLeaderboardStoreFromEnv } from "@/lib/
 export const dynamic = "force-dynamic";
 
 const handlers = createLeaderboardHandlers({
-  store: createLeaderboardStoreFromEnv()
+  store: createLeaderboardStoreFromEnv(),
+  includeSeedEntries: true
 });
 
 export const GET = handlers.GET;

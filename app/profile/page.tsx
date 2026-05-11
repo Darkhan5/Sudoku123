@@ -85,7 +85,10 @@ export default function ProfilePage() {
 
   useEffect(() => {
     const next = getPlayer() ?? initPlayer();
-    const nextSettings = getSettings();
+    let nextSettings = getSettings();
+    if (nextSettings.theme !== "standard" && !canUseExperiencePack(nextSettings.theme)) {
+      nextSettings = setTheme("standard");
+    }
     setPlayer(next);
     setDraftName(next.name);
     setThemeState(nextSettings.theme);
@@ -341,15 +344,15 @@ export default function ProfilePage() {
       <section className="info-panel">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-xs font-bold uppercase text-primary">Доступность</p>
-            <h2 className="text-lg font-bold text-slate-950">Настройки доступности</h2>
+            <p className="text-xs font-bold uppercase text-primary">Цвет и контраст</p>
+            <h2 className="text-lg font-bold text-slate-950">Настройки для людей с дальтонизмом</h2>
           </div>
           <button type="button" className="btn-primary" onClick={() => setAccessibilityOpen(true)}>
             Открыть настройки
           </button>
         </div>
         <p className="mt-3 text-sm font-semibold leading-6 text-slate-600">
-          Ошибки, выбранная клетка и связанные клетки отмечаются цветом, рамкой и текстурой, чтобы игра оставалась читаемой даже без цвета.
+          Настрой цвета, рамки и текстуры так, чтобы ошибки, выбранная клетка и подсветка поля различались не только по цвету.
         </p>
       </section>
 
@@ -363,23 +366,23 @@ export default function ProfilePage() {
 
       {accessibilityOpen ? (
         <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/60 px-4 backdrop-blur-sm" onMouseDown={(event) => event.target === event.currentTarget && setAccessibilityOpen(false)}>
-          <section className="w-full max-w-2xl rounded-2xl bg-white p-5 shadow-2xl" role="dialog" aria-modal="true" aria-label="Настройки доступности">
+          <section className="w-full max-w-2xl rounded-2xl bg-white p-5 shadow-2xl" role="dialog" aria-modal="true" aria-label="Настройки для людей с дальтонизмом">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-xs font-bold uppercase text-primary">Настройки доступности</p>
-                <h2 className="text-2xl font-black text-slate-950">Настройки доступности</h2>
+                <p className="text-xs font-bold uppercase text-primary">Цвет и контраст</p>
+                <h2 className="text-2xl font-black text-slate-950">Настройки для людей с дальтонизмом</h2>
               </div>
-              <button type="button" className="icon-button" onClick={() => setAccessibilityOpen(false)} aria-label="Закрыть настройки">
+              <button type="button" className="icon-button" onClick={() => setAccessibilityOpen(false)} aria-label="Закрыть настройки для людей с дальтонизмом">
                 x
               </button>
             </div>
 
             <div className="mt-5 grid gap-4">
               <section className="accessibility-card">
-                <h3>Ошибочная клетка</h3>
+                <h3>Клетка с ошибкой</h3>
                 <div className="grid gap-3 md:grid-cols-3">
                   <label>
-                    Цвет
+                    Цвет ошибки
                     <input
                       type="color"
                       value={accessibilitySettings(settings).errorCell.color}
@@ -393,7 +396,7 @@ export default function ProfilePage() {
                     />
                   </label>
                   <label>
-                    Текстура
+                    Текстура ошибки
                     <select
                       className="select-control"
                       value={accessibilitySettings(settings).errorCell.texture}
@@ -413,7 +416,7 @@ export default function ProfilePage() {
                     </select>
                   </label>
                   <label>
-                    Паттерн
+                    Знак ошибки
                     <select
                       className="select-control"
                       value={accessibilitySettings(settings).errorCell.pattern}
@@ -472,10 +475,10 @@ export default function ProfilePage() {
               </section>
 
               <section className="accessibility-card">
-                <h3>Связанные клетки</h3>
+                <h3>Подсветка строки, столбца и блока</h3>
                 <div className="grid gap-3 md:grid-cols-2">
                   <label>
-                    Цвет подсветки
+                    Цвет фона
                     <input
                       type="color"
                       value={accessibilitySettings(settings).relatedCells.highlightColor}
@@ -489,7 +492,7 @@ export default function ProfilePage() {
                     />
                   </label>
                   <label className="setting-toggle">
-                    <span>Точечная текстура</span>
+                    <span>Добавить точки</span>
                     <input
                       type="checkbox"
                       checked={accessibilitySettings(settings).relatedCells.dottedTexture}

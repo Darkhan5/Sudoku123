@@ -8,6 +8,7 @@ import { Board } from "./Board";
 interface GameReviewSummaryProps {
   report: GameReport;
   onOpenDetails: () => void;
+  detailsLocked?: boolean;
 }
 
 interface GameReviewDetailsProps {
@@ -74,7 +75,7 @@ function HeatmapGrid({ heatmap }: { heatmap: HeatmapCell[][] }) {
   );
 }
 
-export function GameReviewSummary({ report, onOpenDetails }: GameReviewSummaryProps) {
+export function GameReviewSummary({ report, onOpenDetails, detailsLocked = false }: GameReviewSummaryProps) {
   const { weaknessProfile, session } = report;
   const mistakeCount = session.moves.filter((move) => move.action === "place" && !move.correct).length;
   const scoreStyle = { "--review-score": `${Math.max(0, Math.min(100, report.score)) * 3.6}deg` } as CSSProperties;
@@ -112,8 +113,14 @@ export function GameReviewSummary({ report, onOpenDetails }: GameReviewSummaryPr
         </div>
       </div>
 
+      {detailsLocked ? (
+        <p className="rounded-xl border border-cyan-100 bg-cyan-50 px-4 py-3 text-left text-sm font-bold leading-5 text-slate-700">
+          Подробный таймлайн ходов и объяснения ИИ доступны в Судоку Пассе.
+        </p>
+      ) : null}
+
       <button type="button" className="btn-primary w-full" onClick={onOpenDetails}>
-        Открыть пошаговый разбор
+        {detailsLocked ? "Открыть подробный анализ" : "Открыть пошаговый разбор"}
       </button>
     </section>
   );

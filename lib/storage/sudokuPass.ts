@@ -133,8 +133,8 @@ function cacheState(state: SudokuPassState): SudokuPassState {
 function syncPlayerPlanWithPass(state: SudokuPassState): void {
   const player = getPlayer();
   if (!player) return;
-  if (player.plan === "sudoku-pass" && !state.premiumActive) updatePlayer({ plan: "free" });
-  if (player.plan === "free" && state.premiumActive) updatePlayer({ plan: "sudoku-pass" });
+  if ((player.plan === "sudoku-pass" || player.plan === "diamond") && !state.premiumActive) updatePlayer({ plan: "free" });
+  if (player.plan !== "sudoku-pass" && state.premiumActive) updatePlayer({ plan: "sudoku-pass" });
 }
 
 function grantPassRewards(state: SudokuPassState, rewards: PassReward[]): PassReward[] {
@@ -272,11 +272,11 @@ export function isPassRewardUnlocked(reward: PassReward): boolean {
 export function canUseExperiencePack(theme: ThemeName): boolean {
   if (theme === "standard") return true;
   const player = getPlayer();
-  if (player?.plan === "diamond") return true;
+  const hasPremiumPlan = player?.plan === "sudoku-pass" || player?.plan === "diamond";
   const state = readState();
+  if (!hasPremiumPlan || !state.premiumActive) return false;
   const reward = getThemeReward(theme);
-  if (!reward) return player?.plan === "sudoku-pass" && state.premiumActive;
-  if (reward.track === "premium" && !state.premiumActive) return false;
+  if (!reward) return true;
   return isPassLevelUnlocked(state.xp, reward.level);
 }
 

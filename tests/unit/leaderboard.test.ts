@@ -4,6 +4,7 @@ import {
   LEADERBOARD_SCOPES,
   filterLeaderboard,
   rankLeaderboard,
+  seedLeaderboardEntries,
   scoreFor,
   upsertLeaderboardEntry
 } from "../../lib/domain/leaderboard";
@@ -60,6 +61,20 @@ describe("global leaderboard logic", () => {
         ["clean-slow", 3]
       ]
     );
+  });
+
+  it("keeps display scores in the thousands", () => {
+    assert.equal(scoreFor(320, 0, 1), 8540);
+    assert.equal(scoreFor(5000, 20, 5), 1000);
+  });
+
+  it("builds motivational seed entries for a daily board", () => {
+    const seeds = seedLeaderboardEntries("2026-05-11");
+
+    assert.equal(seeds.length >= 8, true);
+    assert.equal(seeds.every((entry) => entry.date === "2026-05-11"), true);
+    assert.equal(seeds.every((entry) => entry.score >= 1000), true);
+    assert.equal(seeds.some((entry) => entry.city === "Астана"), true);
   });
 
   it("filters the player's city without using countries", () => {

@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { OnboardingGate } from "@/components/onboarding/OnboardingGate";
 import { DailyLoginRewardLayer } from "@/components/ui/DailyLoginRewardLayer";
-import { getSettings } from "@/lib/storage/settings";
+import { canUseExperiencePack } from "@/lib/storage/sudokuPass";
+import { getSettings, setTheme } from "@/lib/storage/settings";
 import { getPlayer, isPlayerOnboarded } from "@/lib/storage/player";
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
@@ -12,7 +13,10 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     setOnboarded(isPlayerOnboarded(getPlayer()));
-    const settings = getSettings();
+    let settings = getSettings();
+    if (settings.theme !== "standard" && !canUseExperiencePack(settings.theme)) {
+      settings = setTheme("standard");
+    }
     document.documentElement.dataset.theme = settings.theme;
     document.documentElement.dataset.motion = settings.reducedMotion ? "reduced" : "full";
     document.documentElement.dataset.shake = settings.screenShake === false ? "off" : "on";

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CellPosition, CollectibleIcon, Difficulty, GameReport, GameSession, Player, Settings, SudokuPuzzle } from "@/types";
 import { rollIcon } from "@/lib/data/icons";
 import { analyzeGameSession, completeGameSession, createGameSession, recordGameAction, resumeGameSession } from "@/lib/domain/gameReview";
@@ -174,9 +174,10 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
   const [comboMessage, setComboMessage] = useState("");
   const [comboCells, setComboCells] = useState<Set<string>>(() => new Set());
   const [shakeActive, setShakeActive] = useState(false);
+  const finishingRef = useRef(false);
 
-  const locked = mode === "daily" && complete;
-  const playLocked = locked || !gameStarted;
+  const dailyLocked = mode === "daily" && complete;
+  const playLocked = complete || !gameStarted;
 
   const triggerScreenShake = useCallback(() => {
     if (!settings.screenShake || settings.reducedMotion) return;
@@ -206,6 +207,7 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
           setChecksUsed(saved.checksUsed ?? 0);
           setElapsed(saved.time);
           setComplete(saved.completed);
+          finishingRef.current = saved.completed;
           setGameStarted(saved.completed);
           setGameSession(saved.reviewSession ? (saved.completed ? saved.reviewSession : resumeGameSession(saved.reviewSession)) : null);
           setGameReport(saved.reviewSession && saved.completed ? analyzeGameSession(saved.reviewSession) : null);
@@ -231,6 +233,7 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
         setChecksUsed(0);
         setElapsed(0);
         setComplete(false);
+        finishingRef.current = false;
         setGameStarted(false);
         setGameSession(null);
         setGameReport(null);
@@ -257,6 +260,7 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
       setChecksUsed(0);
       setElapsed(0);
       setComplete(false);
+      finishingRef.current = false;
       setGameStarted(false);
       setGameSession(null);
       setGameReport(null);
@@ -410,7 +414,8 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
       finalValue?: number,
       finalSession?: GameSession | null
     ) => {
-      if (!puzzle || complete || !isBoardComplete(nextBoard, puzzle.solution)) return;
+      if (!puzzle || complete || finishingRef.current || !isBoardComplete(nextBoard, puzzle.solution)) return;
+      finishingRef.current = true;
 
       const date = mode === "daily" ? dailyDate : todayIso();
       const previousDaily = mode === "daily" ? getDailyState(date) : null;
@@ -514,7 +519,7 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
 
   const placeNumber = useCallback(
     (value: number) => {
-      if (!gameStarted || !selected || !puzzle || locked || given[selected.row][selected.col]) return;
+      if (!gameStarted || !selected || !puzzle || complete || given[selected.row][selected.col]) return;
 
       if (notesMode) {
         pushHistory();
@@ -593,11 +598,11 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
       persistDaily(nextBoard, nextNotes, false, elapsed, nextMistakes, hintsUsed, notesUsed, checksUsed, nextSession);
       finishIfSolved(nextBoard, nextNotes, nextMistakes, hintsUsed, elapsed, value, nextSession);
     },
-    [board, checksUsed, comboCells, comboStreak, elapsed, finishIfSolved, gameSession, gameStarted, given, hintsUsed, initialBoard, locked, mistakes, mode, notes, notesMode, notesUsed, persistDaily, pushHistory, puzzle, selected, settings, triggerScreenShake]
+    [board, checksUsed, comboCells, comboStreak, complete, elapsed, finishIfSolved, gameSession, gameStarted, given, hintsUsed, initialBoard, mistakes, mode, notes, notesMode, notesUsed, persistDaily, pushHistory, puzzle, selected, settings, triggerScreenShake]
   );
 
   const eraseSelected = useCallback(() => {
-    if (!gameStarted || !selected || locked || given[selected.row][selected.col] || !puzzle) return;
+    if (!gameStarted || !selected || complete || given[selected.row][selected.col] || !puzzle) return;
     pushHistory();
     const nextBoard = cloneBoard(board);
     const nextNotes = notes.map((row) => row.map((cell) => new Set(cell)));
@@ -634,7 +639,7 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
     if (nextSession !== gameSession) setGameSession(nextSession);
     playFeedback(settings, "tap");
     persistDaily(nextBoard, nextNotes, false, elapsed, mistakes, hintsUsed, notesUsed, checksUsed, nextSession);
-  }, [board, checksUsed, elapsed, gameSession, gameStarted, given, hintsUsed, initialBoard, locked, mistakes, mode, notes, notesUsed, persistDaily, pushHistory, puzzle, selected, settings]);
+  }, [board, checksUsed, complete, elapsed, gameSession, gameStarted, given, hintsUsed, initialBoard, mistakes, mode, notes, notesUsed, persistDaily, pushHistory, puzzle, selected, settings]);
 
   const undo = useCallback(() => {
     if (!gameStarted) return;
@@ -652,7 +657,8 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
   }, [gameStarted, persistDaily]);
 
   const restart = useCallback(() => {
-    if (!puzzle || locked) return;
+    if (!puzzle || dailyLocked) return;
+    finishingRef.current = false;
     setBoard(cloneBoard(initialBoard));
     setNotes(emptyNotes());
     setMistakes(0);
@@ -670,7 +676,7 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
     setLeaderboardNotice("");
     setHistory([]);
     setSelected(firstEmpty(initialBoard, given));
-  }, [given, initialBoard, locked, puzzle]);
+  }, [dailyLocked, given, initialBoard, puzzle]);
 
   const newFreeGame = useCallback(() => {
     setGameSeed((seed) => seed + 1);
@@ -717,7 +723,7 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
   }, [board, checksUsed, elapsed, gameSession, given, initialBoard, mistakes, mode, notes, notesUsed, persistDaily, puzzle, selected]);
 
   const checkBoard = useCallback(() => {
-    if (!gameStarted || locked || !puzzle) return;
+    if (!gameStarted || complete || !puzzle) return;
     const target = selected ?? firstEmpty(board, given) ?? { row: -1, col: -1 };
     const timestamp = Date.now();
     const nextSession = recordGameAction(
@@ -746,7 +752,13 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
     setGameSession(nextSession);
     persistDaily(board, notes, false, elapsed, mistakes, hintsUsed, notesUsed, nextChecks, nextSession);
     playFeedback(settings, errors.length === 0 ? "success" : "error");
-  }, [board, checksUsed, elapsed, errors.length, gameSession, gameStarted, given, hintsUsed, initialBoard, locked, mistakes, mode, notes, notesUsed, persistDaily, puzzle, selected, settings]);
+    if (errors.length === 0) finishIfSolved(board, notes, mistakes, hintsUsed, elapsed, undefined, nextSession);
+  }, [board, checksUsed, complete, elapsed, errors.length, finishIfSolved, gameSession, gameStarted, given, hintsUsed, initialBoard, mistakes, mode, notes, notesUsed, persistDaily, puzzle, selected, settings]);
+
+  useEffect(() => {
+    if (!ready || !gameStarted || complete || !puzzle) return;
+    finishIfSolved(board, notes, mistakes, hintsUsed, elapsed, undefined, gameSession);
+  }, [board, complete, elapsed, finishIfSolved, gameSession, gameStarted, hintsUsed, mistakes, notes, puzzle, ready]);
 
   const canUseOrnaments = canUseOrnamentMode(player?.plan ?? "free");
 

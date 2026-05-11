@@ -5,6 +5,7 @@ import {
   filterLeaderboard,
   isLeaderboardScope,
   rankLeaderboard,
+  seedLeaderboardEntries,
   scoreFor,
   upsertLeaderboardEntry,
   type LeaderboardRecord
@@ -20,6 +21,7 @@ export interface LeaderboardStore {
 export interface LeaderboardHandlersConfig {
   store: LeaderboardStore;
   now?: () => Date;
+  includeSeedEntries?: boolean;
 }
 
 interface SubmitPayload {
@@ -150,6 +152,15 @@ function normalizeStoredLeaderboardEntries(entries: LeaderboardRecord[]): Leader
   });
 }
 
+function withSeedLeaderboardEntries(entries: LeaderboardRecord[], date: string, includeSeedEntries: boolean): LeaderboardRecord[] {
+  const normalized = normalizeStoredLeaderboardEntries(entries);
+  if (!includeSeedEntries) return normalized;
+
+  const realKeys = new Set(normalized.map((entry) => `${entry.date}:${entry.playerId}`));
+  const seeds = seedLeaderboardEntries(date).filter((entry) => !realKeys.has(`${entry.date}:${entry.playerId}`));
+  return [...normalized, ...seeds];
+}
+
 export function createFileLeaderboardStore(filePath = DATA_FILE): LeaderboardStore {
   return {
     async read() {
@@ -248,7 +259,7 @@ export function createLeaderboardStoreFromEnv(): LeaderboardStore {
   return createFileLeaderboardStore();
 }
 
-export function createLeaderboardHandlers({ store, now = () => new Date() }: LeaderboardHandlersConfig) {
+export function createLeaderboardHandlers({ store, now = () => new Date(), includeSeedEntries = false }: LeaderboardHandlersConfig) {
   return {
     async GET(req: Request): Promise<Response> {
       const url = new URL(req.url);
@@ -263,7 +274,7 @@ export function createLeaderboardHandlers({ store, now = () => new Date() }: Lea
       const playerId = url.searchParams.get("playerId");
       const city = asString(url.searchParams.get("city"));
       const date = requestedDate(url, now());
-      const entries = normalizeStoredLeaderboardEntries(await store.read());
+      const entries = withSeedLeaderboardEntries(await store.read(), date, includeSeedEntries);
       const dailyEntries = entries.filter((entry) => entry.date === date);
       const ranked = rankLeaderboard(filterLeaderboard(dailyEntries, tab, city));
       const current = playerId ? ranked.find((entry) => entry.playerId === playerId) : null;
@@ -295,7 +306,7 @@ export function createLeaderboardHandlers({ store, now = () => new Date() }: Lea
         const nextEntries = upsertLeaderboardEntry(entries, entry);
         await store.write(nextEntries);
 
-        const sameDayEntries = normalizeStoredLeaderboardEntries(nextEntries).filter((rankedEntry) => rankedEntry.date === entry.date);
+        const sameDayEntries = withSeedLeaderboardEntries(nextEntries, entry.date, includeSeedEntries).filter((rankedEntry) => rankedEntry.date === entry.date);
         const rank = rankLeaderboard(sameDayEntries).find((rankedEntry) => rankedEntry.playerId === entry.playerId);
 
         return jsonResponse({

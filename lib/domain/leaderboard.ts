@@ -55,7 +55,38 @@ export function penaltyTimeFor(time: number, mistakes: number, hintsUsed: number
 }
 
 export function scoreFor(time: number, mistakes: number, hintsUsed: number): number {
-  return Math.max(100, 1200 - penaltyTimeFor(time, mistakes, hintsUsed));
+  return Math.max(1000, 10_000 - penaltyTimeFor(time, mistakes, hintsUsed) * 4);
+}
+
+export function seedLeaderboardEntries(date: string): LeaderboardRecord[] {
+  const entries = [
+    { playerId: "seed:aliya", name: "Алия", city: "Астана", icon: "🧠", time: 386, mistakes: 0, hintsUsed: 1 },
+    { playerId: "seed:nurlan", name: "Нурлан", city: "Алматы", icon: "⚡", time: 414, mistakes: 1, hintsUsed: 0 },
+    { playerId: "seed:dana", name: "Дана", city: "Астана", icon: "💎", time: 462, mistakes: 1, hintsUsed: 1 },
+    { playerId: "seed:timur", name: "Тимур", city: "Шымкент", icon: "🔥", time: 518, mistakes: 2, hintsUsed: 0 },
+    { playerId: "seed:madina", name: "Мәдина", city: "Актобе", icon: "🌙", time: 575, mistakes: 1, hintsUsed: 2 },
+    { playerId: "seed:arman", name: "Арман", city: "Караганда", icon: "✨", time: 628, mistakes: 3, hintsUsed: 1 },
+    { playerId: "seed:saida", name: "Саида", city: "Астана", icon: "🎯", time: 690, mistakes: 2, hintsUsed: 2 },
+    { playerId: "seed:yerlan", name: "Ерлан", city: "Павлодар", icon: "🏁", time: 744, mistakes: 4, hintsUsed: 1 }
+  ];
+
+  return entries.map((entry, index) => ({
+    id: `${date}:${entry.playerId}`,
+    playerId: entry.playerId,
+    name: entry.name,
+    city: entry.city,
+    country: "Казахстан",
+    countryCode: "KZ",
+    avatarUrl: "",
+    icon: entry.icon,
+    date,
+    time: entry.time,
+    mistakes: entry.mistakes,
+    hintsUsed: entry.hintsUsed,
+    accuracy: accuracyFor(entry.mistakes, entry.hintsUsed),
+    score: scoreFor(entry.time, entry.mistakes, entry.hintsUsed),
+    createdAt: `${date}T08:${String(index).padStart(2, "0")}:00.000Z`
+  }));
 }
 
 function compareLeaderboardEntries(a: LeaderboardRecord, b: LeaderboardRecord): number {
