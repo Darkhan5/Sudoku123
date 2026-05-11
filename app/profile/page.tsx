@@ -286,12 +286,18 @@ export default function ProfilePage() {
               >
                 <span className="pack-preview">
                   <strong className="digit">123</strong>
-                  {!unlocked ? <span className="pack-lock" aria-hidden>🔒</span> : null}
+                  {!unlocked ? <span className="pack-lock" aria-hidden>!</span> : null}
                 </span>
                 <strong>{pack.name}</strong>
                 <span>{pack.description}</span>
                 <small>
-                  {unlocked ? "✓ Куплено" : `Открыть за ${pack.requiredDiamonds} 💎`}
+                  {unlocked ? (
+                    "Куплено"
+                  ) : (
+                    <>
+                      Открыть за {pack.requiredDiamonds} <DiamondGlyph className="diamond-glyph-xs" />
+                    </>
+                  )}
                 </small>
               </button>
             );

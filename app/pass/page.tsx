@@ -73,8 +73,13 @@ export default function SudokuPassPage() {
   const daysLeft = daysUntilSeasonEnds(view.season);
   const premium = view.state.premiumActive;
   const allRewards = levels.flatMap((level) => [...level.free, ...level.premium]);
+  const freeRewards = levels.flatMap((level) => level.free);
+  const premiumRewards = levels.flatMap((level) => level.premium);
+  const freeDiamondTotal = sumDiamonds(freeRewards);
+  const premiumDiamondTotal = sumDiamonds(premiumRewards);
   const claimableRewards = allRewards.filter((reward) => isRewardClaimable(reward, view.state.xp, premium, claimedIds));
   const nextReward = allRewards.find((reward) => !claimedIds.has(reward.id) && view.state.xp < levelXp(reward.level));
+  const highlightedReward = highlightRewardId ? allRewards.find((reward) => reward.id === highlightRewardId) : null;
   const levelPercent = view.progress.nextLevelXp === null ? 100 : Math.round((view.progress.xpIntoLevel / SUDOKU_PASS_XP_PER_LEVEL) * 100);
 
   function claimReward(rewardId: string) {
@@ -95,7 +100,7 @@ export default function SudokuPassPage() {
         <div className="pass-hero-copy">
           <p className="pass-kicker">{view.season.name}</p>
           <h1>Судоку Пасс</h1>
-          <p>30 дней наград, тем, алмазов и сезонных испытаний.</p>
+          <p>30 дней, 30 уровней и подарки каждый день: бесплатная дорожка плюс мощный премиум-трек.</p>
           <div className="pass-hero-stats" aria-label="Статус сезона">
             <span>
               <strong>{daysLeft}</strong>
@@ -108,6 +113,10 @@ export default function SudokuPassPage() {
             <span>
               <strong>{claimableRewards.length}</strong>
               можно забрать
+            </span>
+            <span>
+              <strong>{freeDiamondTotal + premiumDiamondTotal}</strong>
+              алмазов в сезоне
             </span>
           </div>
         </div>
@@ -140,6 +149,58 @@ export default function SudokuPassPage() {
         )}
         {nextReward ? <span className="pass-next-pill">Ближайшая награда: {nextReward.title}</span> : null}
         {claimNotice ? <span className="pass-claim-notice">{claimNotice}</span> : null}
+      </section>
+
+      {highlightedReward ? (
+        <section className="pass-target-panel" aria-live="polite">
+          <div>
+            <p>Ты выбрал закрытую тему</p>
+            <h2>{highlightedReward.title}</h2>
+            <span>
+              Она открывается на {highlightedReward.level} уровне премиум-трека. Забирай опыт за задания, поднимай уровень и
+              возвращайся сюда за наградой.
+            </span>
+          </div>
+          {!premium ? (
+            <button type="button" className="btn-primary" onClick={() => setDiamondOpen(true)}>
+              Открыть Пасс
+            </button>
+          ) : null}
+        </section>
+      ) : null}
+
+      <section className="pass-track-overview" aria-label="Бесплатная и платная версии Судоку Пасса">
+        <article className="pass-overview-card">
+          <div>
+            <p>Бесплатная версия</p>
+            <h2>30 подарков за игру</h2>
+          </div>
+          <ul>
+            <li>{freeRewards.length} наград без оплаты</li>
+            <li>{freeDiamondTotal} алмазов за сезон</li>
+            <li>Стили цифр, бусты опыта и титул</li>
+          </ul>
+        </article>
+
+        <article className="pass-overview-card pass-overview-card-premium">
+          <div>
+            <p>Платная версия</p>
+            <h2>Премиум, который хочется открыть</h2>
+          </div>
+          <ul>
+            <li>{premiumRewards.length} премиум-наград поверх бесплатных</li>
+            <li>{premiumDiamondTotal} алмазов в премиум-треке</li>
+            <li>Кибер-сетка сразу, Библиотечные чернила на 7 уровне</li>
+            <li>Безлимитные ИИ-подсказки, эффекты арены и редкие титулы</li>
+          </ul>
+          {!premium ? (
+            <button type="button" className="btn-primary" onClick={() => setDiamondOpen(true)}>
+              Купить Судоку Пасс
+            </button>
+          ) : (
+            <span className="pass-premium-pill">Уже открыт</span>
+          )}
+        </article>
       </section>
 
       <section className="pass-section-heading">
@@ -262,7 +323,7 @@ function PassTrackRewards({
       } ${trackLocked ? "pass-track-card-locked" : ""}`}
     >
       <div className="pass-track-card-head">
-        <span>{track === "free" ? "Бесплатно" : "Премиум"}</span>
+        <span>{track === "free" ? "Бесплатная версия" : "Платная версия"}</span>
         <em>{status}</em>
       </div>
 
@@ -299,6 +360,7 @@ function PassTrackRewards({
           <small>Следующая награда ближе.</small>
         </div>
       )}
+      {trackLocked ? <small className="pass-track-lock-note">Купи Пасс сейчас, и эти призы станут доступны по мере уровней.</small> : null}
     </div>
   );
 }
@@ -360,6 +422,10 @@ function rewardDescription(reward: PassReward): string {
   if (reward.kind === "board_style") return "Дополнительный стиль игрового поля.";
   if (reward.kind === "animated_cosmetic") return "Анимация для действий на поле.";
   return "Сезонная награда.";
+}
+
+function sumDiamonds(rewards: PassReward[]): number {
+  return rewards.reduce((total, reward) => total + (reward.diamonds ?? 0), 0);
 }
 
 function pluralizeDays(value: number): string {

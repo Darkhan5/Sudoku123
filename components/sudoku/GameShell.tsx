@@ -26,6 +26,7 @@ import { OrnamentLegend } from "@/components/ornaments/OrnamentLegend";
 import { OrnamentPreview } from "@/components/ornaments/OrnamentPreview";
 import { CompletionModal } from "@/components/ui/CompletionModal";
 import { DiamondModal } from "@/components/ui/DiamondModal";
+import { FeatureTour } from "@/components/onboarding/FeatureTour";
 import { Board } from "./Board";
 import { Controls } from "./Controls";
 import { Timer } from "./Timer";
@@ -903,24 +904,26 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
         </section>
       ) : null}
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,480px)_minmax(280px,1fr)] lg:items-start">
-        <Board
-          board={board}
-          given={given}
-          notes={notes}
-          selected={selected}
-          errors={errors}
-          complete={complete}
-          locked={playLocked}
-          ornamentMode={ornamentMode && canUseOrnaments}
-          numberStyle={settings.numberStyle ?? player?.numberStyle ?? "classic"}
-          onSelect={(row, col) => {
-            if (!playLocked) setSelected({ row, col });
-          }}
-          onOrnamentInfo={showOrnamentInfo}
-        />
+      <div className="game-layout">
+        <div className="game-board-wrap">
+          <Board
+            board={board}
+            given={given}
+            notes={notes}
+            selected={selected}
+            errors={errors}
+            complete={complete}
+            locked={playLocked}
+            ornamentMode={ornamentMode && canUseOrnaments}
+            numberStyle={settings.numberStyle ?? player?.numberStyle ?? "classic"}
+            onSelect={(row, col) => {
+              if (!playLocked) setSelected({ row, col });
+            }}
+            onOrnamentInfo={showOrnamentInfo}
+          />
+        </div>
 
-        <div className="grid gap-4">
+        <div className="game-side-panel">
           <Controls
             notesMode={notesMode}
             disabledNumbers={disabledNumbers}
@@ -939,42 +942,42 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
             onOpenOrnamentLegend={() => setOrnamentLegendOpen(true)}
           />
 
-          <section className="info-panel">
-            <h2 className="text-base font-bold text-slate-950">Статус партии</h2>
-            <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
-              <div className="stat-pill">
-                <span className="text-slate-500">Режим</span>
-                <strong>{mode === "daily" ? "Ежедневный" : "Тренировка"}</strong>
-              </div>
-              <div className="stat-pill">
-                <span className="text-slate-500">Сложность</span>
-                <strong>{DIFFICULTIES.find((item) => item.value === puzzle.difficulty)?.label}</strong>
-              </div>
-              <div className="stat-pill">
-                <span className="text-slate-500">Профиль</span>
-                <strong>{player?.plan === "diamond" || player?.plan === "sudoku-pass" ? "Пасс" : "Бесплатно"}</strong>
-              </div>
-              <div className="stat-pill">
-                <span className="text-slate-500">Рейтинг</span>
-                <strong>{leaderboardRank ? `#${leaderboardRank}` : "—"}</strong>
-              </div>
-              <div className="stat-pill">
-                <span className="text-slate-500">Проверки</span>
-                <strong>{checksUsed}</strong>
-              </div>
-              <div className="stat-pill">
-                <span className="text-slate-500">Стирания</span>
-                <strong>{gameSession?.stats.erasures ?? 0}</strong>
-              </div>
-              <div className="stat-pill">
-                <span className="text-slate-500">Уровень</span>
-                <strong>{player?.level ?? 1}</strong>
-              </div>
-              <div className="stat-pill">
-                <span className="text-slate-500">Ранг</span>
-                <strong>{rankLabel(player?.rank ?? "bronze-i")}</strong>
-              </div>
+          <section className="game-status-card" aria-label="Статус партии">
+            <div className="game-status-head">
+              <p>Партия</p>
+              <strong>{mode === "daily" ? "Ежедневный режим" : "Тренировка"}</strong>
             </div>
+            <div className="game-status-list">
+              <span>
+                <small>Сложность</small>
+                <strong>{DIFFICULTIES.find((item) => item.value === puzzle.difficulty)?.label}</strong>
+              </span>
+              <span>
+                <small>Ранг</small>
+                <strong>{rankLabel(player?.rank ?? "bronze-i")}</strong>
+              </span>
+              <span>
+                <small>Рейтинг</small>
+                <strong>{leaderboardRank ? `#${leaderboardRank}` : "после финиша"}</strong>
+              </span>
+              <span>
+                <small>Подсказки</small>
+                <strong>{player?.plan === "diamond" || player?.plan === "sudoku-pass" ? "без лимита" : `${hintsUsed} / 3 сегодня`}</strong>
+              </span>
+              <span>
+                <small>Проверки</small>
+                <strong>{checksUsed}</strong>
+              </span>
+              <span>
+                <small>Профиль</small>
+                <strong>{player?.plan === "diamond" || player?.plan === "sudoku-pass" ? "Пасс" : "Бесплатно"}</strong>
+              </span>
+            </div>
+            <p className="game-status-callout">
+              {mode === "daily"
+                ? "После решения результат появится в рейтинге Казахстана. Подсказка не ломает игру, но влияет на итоговый разбор."
+                : "Свободная игра подходит для тренировки: меняй сложность, проверяй поле и проси ИИ-подсказку, когда застрял."}
+            </p>
           </section>
         </div>
       </div>
@@ -1016,6 +1019,7 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
       />
 
       <DiamondModal open={diamondOpen} onClose={() => setDiamondOpen(false)} onUpgrade={() => setPlayer(getPlayer())} />
+      <FeatureTour mode={mode} plan={player?.plan ?? "free"} />
       <OrnamentPreview
         open={ornamentPreviewOpen}
         onClose={() => setOrnamentPreviewOpen(false)}

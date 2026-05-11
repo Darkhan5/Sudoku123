@@ -244,6 +244,101 @@ select:focus-visible {
     @apply grid gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm;
   }
 
+  .game-layout {
+    display: grid;
+    gap: 1.25rem;
+    align-items: start;
+  }
+
+  @media (min-width: 1024px) {
+    .game-layout {
+      grid-template-columns: minmax(0, 500px) minmax(280px, 1fr);
+    }
+  }
+
+  .game-board-wrap {
+    display: grid;
+    justify-items: center;
+    min-width: 0;
+  }
+
+  .game-side-panel {
+    display: grid;
+    gap: 0.9rem;
+    min-width: 0;
+  }
+
+  .game-status-card {
+    display: grid;
+    gap: 0.75rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 1rem;
+    background: #ffffff;
+    padding: 0.85rem;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+  }
+
+  .game-status-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .game-status-head p {
+    color: #64748b;
+    font-size: 0.72rem;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .game-status-head strong {
+    color: #0f172a;
+    font-size: 0.95rem;
+    font-weight: 950;
+  }
+
+  .game-status-list {
+    display: grid;
+    gap: 0.45rem;
+  }
+
+  .game-status-list span {
+    display: flex;
+    min-height: 2.35rem;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    border-radius: 0.7rem;
+    background: #f8fafc;
+    padding: 0.45rem 0.65rem;
+  }
+
+  .game-status-list small {
+    color: #64748b;
+    font-size: 0.72rem;
+    font-weight: 850;
+  }
+
+  .game-status-list strong {
+    min-width: 0;
+    color: #0f172a;
+    font-size: 0.82rem;
+    font-weight: 950;
+    text-align: right;
+  }
+
+  .game-status-callout {
+    border-radius: 0.8rem;
+    background: #ecfeff;
+    padding: 0.75rem;
+    color: #0e7490;
+    font-size: 0.78rem;
+    font-weight: 850;
+    line-height: 1.45;
+  }
+
   .number-pad {
     @apply grid grid-cols-3 gap-2;
   }
@@ -273,7 +368,7 @@ select:focus-visible {
     display: grid;
     grid-template-columns: repeat(9, minmax(0, 1fr));
     width: 100%;
-    max-width: 450px;
+    max-width: 480px;
     aspect-ratio: 1 / 1;
     overflow: hidden;
     border: 2px solid var(--box-border);
@@ -285,6 +380,7 @@ select:focus-visible {
   .sudoku-cell {
     position: relative;
     display: grid;
+    overflow: hidden;
     min-width: 0;
     min-height: 0;
     aspect-ratio: 1 / 1;
@@ -296,6 +392,8 @@ select:focus-visible {
     color: var(--number-user);
     font-size: clamp(1rem, 4.6vw, 1.5rem);
     font-weight: 700;
+    line-height: 1;
+    -webkit-tap-highlight-color: transparent;
   }
 
   .sudoku-cell:nth-child(9n) {
@@ -369,6 +467,7 @@ select:focus-visible {
     content: "";
     position: absolute;
     inset: 18% 18%;
+    z-index: 1;
     background:
       linear-gradient(45deg, transparent 45%, var(--a11y-error) 45% 55%, transparent 55%),
       linear-gradient(-45deg, transparent 45%, var(--a11y-error) 45% 55%, transparent 55%);
@@ -412,6 +511,8 @@ select:focus-visible {
   }
 
   .note-grid {
+    position: relative;
+    z-index: 2;
     display: grid;
     width: 82%;
     height: 82%;
@@ -621,6 +722,15 @@ select:focus-visible {
 
   .cell-ornament .ornament-symbol {
     animation: ornamentAppear 220ms ease;
+  }
+
+  .sudoku-cell > .digit,
+  .sudoku-cell > .ornament-symbol,
+  .number-button > .digit,
+  .number-button > .ornament-symbol {
+    position: relative;
+    z-index: 2;
+    pointer-events: none;
   }
 
   .number-button .ornament-symbol {
@@ -1675,7 +1785,10 @@ select:focus-visible {
 }
 
 .cosmetic-choice small {
+  display: inline-flex;
   color: #64748b;
+  align-items: center;
+  gap: 0.25rem;
   font-size: 0.72rem;
   font-weight: 800;
 }
@@ -1693,6 +1806,110 @@ select:focus-visible {
   color: #334155;
   font-size: 0.875rem;
   font-weight: 800;
+}
+
+.feature-tour {
+  position: fixed;
+  right: 1rem;
+  bottom: calc(4.75rem + env(safe-area-inset-bottom));
+  z-index: 55;
+  display: grid;
+  width: min(22rem, calc(100vw - 2rem));
+  gap: 0.7rem;
+  border: 1px solid rgba(14, 165, 233, 0.28);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.96);
+  padding: 0.9rem;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.18);
+  backdrop-filter: blur(16px);
+}
+
+@media (min-width: 768px) {
+  .feature-tour {
+    bottom: 1rem;
+  }
+}
+
+.feature-tour-top,
+.feature-tour-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.feature-tour-top span {
+  border-radius: 999px;
+  background: #ecfeff;
+  padding: 0.25rem 0.55rem;
+  color: #0e7490;
+  font-size: 0.68rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.feature-tour-top button {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border-radius: 999px;
+  color: #64748b;
+  font-size: 1rem;
+  font-weight: 950;
+}
+
+.feature-tour strong {
+  color: #0f172a;
+  font-size: 1rem;
+  font-weight: 950;
+  line-height: 1.2;
+}
+
+.feature-tour p {
+  color: #475569;
+  font-size: 0.84rem;
+  font-weight: 780;
+  line-height: 1.45;
+}
+
+.feature-tour-progress {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.feature-tour-progress span {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 999px;
+  background: #cbd5e1;
+}
+
+.feature-tour-progress .feature-tour-dot-active {
+  width: 1.4rem;
+  background: #0ea5e9;
+}
+
+.feature-tour-actions a,
+.feature-tour-skip {
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.feature-tour-next {
+  display: inline-flex;
+  min-height: 2.45rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.8rem;
+  background: #0ea5e9;
+  padding: 0 0.9rem;
+  color: #ffffff;
+  font-size: 0.82rem;
+  font-weight: 950;
+  box-shadow: 0 12px 24px rgba(14, 165, 233, 0.22);
 }
 
 @keyframes digitPop {
@@ -1904,6 +2121,8 @@ select:focus-visible {
 
 :root[data-theme="cyber-grid"] .info-panel,
 :root[data-theme="cyber-grid"] .controls-panel,
+:root[data-theme="cyber-grid"] .game-status-card,
+:root[data-theme="cyber-grid"] .game-status-list span,
 :root[data-theme="cyber-grid"] .leaderboard-table,
 :root[data-theme="cyber-grid"] .profile-summary,
 :root[data-theme="cyber-grid"] .toolbar-band,
@@ -1916,6 +2135,9 @@ select:focus-visible {
 :root[data-theme="cyber-grid"] .select-control,
 :root[data-theme="cyber-grid"] .input-control,
 :root[data-theme="cyber-grid"] .segmented-control,
+:root[data-theme="cyber-grid"] .feature-tour,
+:root[data-theme="cyber-grid"] .pass-target-panel,
+:root[data-theme="cyber-grid"] .pass-overview-card,
 :root[data-theme="cyber-grid"] header,
 :root[data-theme="cyber-grid"] .bg-white,
 :root[data-theme="cyber-grid"] .bg-slate-50 {
@@ -1935,6 +2157,82 @@ select:focus-visible {
 :root[data-theme="cyber-grid"] .text-slate-500,
 :root[data-theme="cyber-grid"] .text-slate-400 {
   color: #93b7c4 !important;
+}
+
+:root[data-theme="cyber-grid"] .game-status-head strong,
+:root[data-theme="cyber-grid"] .game-status-list strong,
+:root[data-theme="cyber-grid"] .feature-tour strong,
+:root[data-theme="cyber-grid"] .pass-target-panel h2,
+:root[data-theme="cyber-grid"] .pass-overview-card h2 {
+  color: #f8fdff;
+}
+
+:root[data-theme="cyber-grid"] .game-status-head p,
+:root[data-theme="cyber-grid"] .game-status-list small,
+:root[data-theme="cyber-grid"] .feature-tour p,
+:root[data-theme="cyber-grid"] .pass-target-panel span,
+:root[data-theme="cyber-grid"] .pass-overview-card ul {
+  color: #93b7c4;
+}
+
+:root[data-theme="cyber-grid"] .game-status-callout,
+:root[data-theme="cyber-grid"] .feature-tour-top span {
+  background: rgba(103, 232, 249, 0.1);
+  color: #67e8f9;
+}
+
+:root[data-theme="library-ink"] .info-panel,
+:root[data-theme="library-ink"] .controls-panel,
+:root[data-theme="library-ink"] .game-status-card,
+:root[data-theme="library-ink"] .leaderboard-table,
+:root[data-theme="library-ink"] .profile-summary,
+:root[data-theme="library-ink"] .toolbar-band,
+:root[data-theme="library-ink"] .badge-soft,
+:root[data-theme="library-ink"] .icon-button,
+:root[data-theme="library-ink"] .number-button,
+:root[data-theme="library-ink"] .action-button,
+:root[data-theme="library-ink"] .theme-option,
+:root[data-theme="library-ink"] .editable-field,
+:root[data-theme="library-ink"] .select-control,
+:root[data-theme="library-ink"] .input-control,
+:root[data-theme="library-ink"] .segmented-control,
+:root[data-theme="library-ink"] .feature-tour,
+:root[data-theme="library-ink"] .pass-target-panel,
+:root[data-theme="library-ink"] .pass-overview-card {
+  border-color: rgba(124, 84, 48, 0.24);
+  background: rgba(255, 248, 237, 0.96);
+  color: #3a2614;
+}
+
+:root[data-theme="library-ink"] .game-status-list span,
+:root[data-theme="library-ink"] .game-status-callout,
+:root[data-theme="library-ink"] .feature-tour-top span {
+  background: rgba(234, 216, 182, 0.7);
+  color: #70451f;
+}
+
+:root[data-theme="library-ink"] .game-status-head strong,
+:root[data-theme="library-ink"] .game-status-list strong,
+:root[data-theme="library-ink"] .feature-tour strong,
+:root[data-theme="library-ink"] .pass-target-panel h2,
+:root[data-theme="library-ink"] .pass-overview-card h2 {
+  color: #392516;
+}
+
+:root[data-theme="library-ink"] .game-status-head p,
+:root[data-theme="library-ink"] .game-status-list small,
+:root[data-theme="library-ink"] .feature-tour p,
+:root[data-theme="library-ink"] .pass-target-panel span,
+:root[data-theme="library-ink"] .pass-overview-card ul {
+  color: #73563a;
+}
+
+:root[data-theme="cyber-grid"] .theme-option:hover,
+:root[data-theme="cyber-grid"] .theme-option:focus-visible,
+:root[data-theme="library-ink"] .theme-option:hover,
+:root[data-theme="library-ink"] .theme-option:focus-visible {
+  color: currentColor;
+  filter: brightness(1.04);
 }
 
 :root[data-theme="cyber-grid"] .sudoku-board::before {
@@ -2740,6 +3038,97 @@ select:focus-visible {
   backdrop-filter: blur(16px);
 }
 
+.pass-target-panel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border: 1px solid rgba(34, 211, 238, 0.32);
+  border-radius: 1rem;
+  background: linear-gradient(135deg, #ecfeff, #f8fafc);
+  padding: 1rem;
+}
+
+.pass-target-panel p,
+.pass-overview-card p {
+  color: #0e7490;
+  font-size: 0.72rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.pass-target-panel h2,
+.pass-overview-card h2 {
+  color: #0f172a;
+  font-size: 1.1rem;
+  font-weight: 950;
+}
+
+.pass-target-panel span {
+  display: block;
+  max-width: 46rem;
+  color: #475569;
+  font-size: 0.88rem;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.pass-track-overview {
+  display: grid;
+  gap: 0.9rem;
+}
+
+@media (min-width: 820px) {
+  .pass-track-overview {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  }
+}
+
+.pass-overview-card {
+  display: grid;
+  gap: 0.9rem;
+  align-content: start;
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+  background: #ffffff;
+  padding: 1rem;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.05);
+}
+
+.pass-overview-card-premium {
+  border-color: rgba(250, 204, 21, 0.5);
+  background:
+    linear-gradient(135deg, rgba(255, 247, 237, 0.96), rgba(255, 255, 255, 0.98)),
+    linear-gradient(90deg, rgba(250, 204, 21, 0.18), transparent);
+  box-shadow: 0 18px 42px rgba(120, 53, 15, 0.1);
+}
+
+.pass-overview-card ul {
+  display: grid;
+  gap: 0.5rem;
+  color: #475569;
+  font-size: 0.86rem;
+  font-weight: 850;
+  line-height: 1.45;
+}
+
+.pass-overview-card li {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.pass-overview-card li::before {
+  content: "✓";
+  color: #0e7490;
+  font-weight: 950;
+}
+
+.pass-overview-card-premium li::before {
+  color: #b45309;
+}
+
 .pass-premium-pill,
 .pass-next-pill,
 .pass-claim-notice {
@@ -2889,6 +3278,14 @@ select:focus-visible {
 
 .pass-track-card-locked {
   opacity: 0.78;
+}
+
+.pass-track-lock-note {
+  display: block;
+  color: #b45309;
+  font-size: 0.74rem;
+  font-weight: 850;
+  line-height: 1.35;
 }
 
 .pass-track-card-head {
@@ -3094,8 +3491,22 @@ select:focus-visible {
   --theme-accent-soft: rgba(14, 165, 233, 0.16);
 }
 
+:root[data-theme="library-ink"] {
+  --theme-readable-text: #3a2614;
+  --theme-strong-text: #24170d;
+  --theme-muted-text: #73563a;
+  --theme-surface: rgba(255, 248, 237, 0.96);
+  --theme-surface-raised: rgba(255, 249, 238, 0.98);
+  --theme-surface-soft: rgba(234, 216, 182, 0.74);
+  --theme-border-muted: rgba(124, 84, 48, 0.24);
+  --theme-accent: #70451f;
+  --theme-accent-soft: rgba(232, 204, 150, 0.74);
+}
+
 :root[data-theme="cyber-grid"] .pass-actions,
 :root[data-theme="cyber-grid"] .start-game-panel,
+:root[data-theme="cyber-grid"] .pass-target-panel,
+:root[data-theme="cyber-grid"] .pass-overview-card,
 :root[data-theme="cyber-grid"] .pass-level-row,
 :root[data-theme="cyber-grid"] .pass-track-card,
 :root[data-theme="cyber-grid"] .pass-reward-item,
@@ -3114,6 +3525,8 @@ select:focus-visible {
 :root[data-theme="cyber-grid"] .sabotage-card,
 :root[data-theme="diamond-black"] .pass-actions,
 :root[data-theme="diamond-black"] .start-game-panel,
+:root[data-theme="diamond-black"] .pass-target-panel,
+:root[data-theme="diamond-black"] .pass-overview-card,
 :root[data-theme="diamond-black"] .pass-level-row,
 :root[data-theme="diamond-black"] .pass-track-card,
 :root[data-theme="diamond-black"] .pass-reward-item,
@@ -3129,6 +3542,25 @@ select:focus-visible {
 :root[data-theme="diamond-black"] .streak-day,
 :root[data-theme="diamond-black"] .diamond-wallet-row,
 :root[data-theme="diamond-black"] .arena-friend-status,
+:root[data-theme="library-ink"] .pass-actions,
+:root[data-theme="library-ink"] .start-game-panel,
+:root[data-theme="library-ink"] .pass-target-panel,
+:root[data-theme="library-ink"] .pass-overview-card,
+:root[data-theme="library-ink"] .pass-level-row,
+:root[data-theme="library-ink"] .pass-track-card,
+:root[data-theme="library-ink"] .pass-reward-item,
+:root[data-theme="library-ink"] .pass-empty-reward,
+:root[data-theme="library-ink"] .pass-task,
+:root[data-theme="library-ink"] .cosmetic-choice,
+:root[data-theme="library-ink"] .accessibility-card,
+:root[data-theme="library-ink"] .setting-toggle,
+:root[data-theme="library-ink"] .diamond-shop-pack,
+:root[data-theme="library-ink"] .diamond-membership-panel,
+:root[data-theme="library-ink"] .leaderboard-current,
+:root[data-theme="library-ink"] .icon-tile,
+:root[data-theme="library-ink"] .streak-day,
+:root[data-theme="library-ink"] .diamond-wallet-row,
+:root[data-theme="library-ink"] .arena-friend-status,
 :root[data-theme="diamond-black"] .sabotage-card {
   border-color: var(--theme-border-muted);
   background: var(--theme-surface-raised);
@@ -3273,6 +3705,40 @@ select:focus-visible {
 :root[data-theme="diamond-black"] .rank-badge,
 :root[data-theme="diamond-black"] .diamond-wallet-cost {
   color: var(--theme-accent);
+}
+
+:root[data-theme="cyber-grid"] .pass-target-panel h2,
+:root[data-theme="cyber-grid"] .pass-overview-card h2,
+:root[data-theme="library-ink"] .pass-target-panel h2,
+:root[data-theme="library-ink"] .pass-overview-card h2,
+:root[data-theme="diamond-black"] .pass-target-panel h2,
+:root[data-theme="diamond-black"] .pass-overview-card h2 {
+  color: var(--theme-strong-text);
+}
+
+:root[data-theme="cyber-grid"] .pass-target-panel span,
+:root[data-theme="cyber-grid"] .pass-overview-card ul,
+:root[data-theme="library-ink"] .pass-target-panel span,
+:root[data-theme="library-ink"] .pass-overview-card ul,
+:root[data-theme="diamond-black"] .pass-target-panel span,
+:root[data-theme="diamond-black"] .pass-overview-card ul {
+  color: var(--theme-muted-text);
+}
+
+:root[data-theme="cyber-grid"] .pass-target-panel p,
+:root[data-theme="cyber-grid"] .pass-overview-card p,
+:root[data-theme="library-ink"] .pass-target-panel p,
+:root[data-theme="library-ink"] .pass-overview-card p,
+:root[data-theme="diamond-black"] .pass-target-panel p,
+:root[data-theme="diamond-black"] .pass-overview-card p {
+  color: var(--theme-accent);
+}
+
+:root[data-theme="cyber-grid"] .pass-overview-card-premium,
+:root[data-theme="library-ink"] .pass-overview-card-premium,
+:root[data-theme="diamond-black"] .pass-overview-card-premium {
+  border-color: var(--theme-accent);
+  background: linear-gradient(135deg, var(--theme-accent-soft), var(--theme-surface-raised));
 }
 
 @keyframes cyberGridDrift {

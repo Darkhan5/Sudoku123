@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import {
   getCurrentSudokuPassSeason,
   getPassProgressSnapshot,
+  SUDOKU_PASS_REWARD_LEVELS,
   getThemeReward,
   taskForPuzzleSolved
 } from "../../lib/domain/sudokuPass";
@@ -28,6 +29,12 @@ describe("Sudoku Pass domain", () => {
   it("places Cyber Grid and Library Ink on the premium track", () => {
     assert.equal(getThemeReward("cyber-grid")?.level, 1);
     assert.equal(getThemeReward("library-ink")?.level, 7);
+  });
+
+  it("gives every level a free and premium reward", () => {
+    assert.equal(SUDOKU_PASS_REWARD_LEVELS.length, 30);
+    assert.ok(SUDOKU_PASS_REWARD_LEVELS.every((level) => level.free.length > 0));
+    assert.ok(SUDOKU_PASS_REWARD_LEVELS.every((level) => level.premium.length > 0));
   });
 
   it("turns solved puzzles into daily and seasonal task progress", () => {

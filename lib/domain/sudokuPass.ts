@@ -142,51 +142,57 @@ function rewardId(track: "free" | "premium", level: number, suffix: string): str
 }
 
 function freeReward(level: number): PassReward[] {
+  const rewards: PassReward[] = [
+    {
+      id: rewardId("free", level, "diamonds"),
+      level,
+      track: "free",
+      kind: "diamonds",
+      title: `${level === 30 ? 30 : Math.ceil(level / 2) + 1} алмазов`,
+      diamonds: level === 30 ? 30 : Math.ceil(level / 2) + 1
+    }
+  ];
+
   if (level === 5) {
-    return [{ id: rewardId("free", level, "neon"), level, track: "free", kind: "number_style", title: "Неоновые цифры", numberStyle: "neon" }];
+    rewards.push({ id: rewardId("free", level, "neon"), level, track: "free", kind: "number_style", title: "Неоновые цифры", numberStyle: "neon" });
   }
   if (level === 12) {
-    return [{ id: rewardId("free", level, "pixel"), level, track: "free", kind: "number_style", title: "Пиксельные цифры", numberStyle: "pixel" }];
+    rewards.push({ id: rewardId("free", level, "pixel"), level, track: "free", kind: "number_style", title: "Пиксельные цифры", numberStyle: "pixel" });
   }
   if ([8, 18, 26].includes(level)) {
-    return [{ id: rewardId("free", level, "xp-boost"), level, track: "free", kind: "xp_boost", title: "Буст опыта на 2 часа", boostHours: 2 }];
+    rewards.push({ id: rewardId("free", level, "xp-boost"), level, track: "free", kind: "xp_boost", title: "Буст опыта на 2 часа", boostHours: 2 });
   }
-  if (level % 3 === 0 || level === 1) {
-    return [
-      {
-        id: rewardId("free", level, "diamonds"),
-        level,
-        track: "free",
-        kind: "diamonds",
-        title: `${Math.ceil(level / 3) + 1} алмаза`,
-        diamonds: Math.ceil(level / 3) + 1
-      }
-    ];
+  if (level === 20) {
+    rewards.push({ id: rewardId("free", level, "title-calm-solver"), level, track: "free", kind: "title", title: "Титул: Спокойный решатель" });
   }
-  return [];
+
+  return rewards;
 }
 
 function premiumReward(level: number): PassReward[] {
-  const rewards: PassReward[] = [];
+  const rewards: PassReward[] = [
+    {
+      id: rewardId("premium", level, "diamonds"),
+      level,
+      track: "premium",
+      kind: "diamonds",
+      title: `${level === 30 ? 120 : level * 3 + 12} алмазов`,
+      diamonds: level === 30 ? 120 : level * 3 + 12
+    }
+  ];
+
   if (level === 1) rewards.push({ id: rewardId("premium", level, "cyber-grid"), level, track: "premium", kind: "theme", title: "Тема «Кибер-сетка»", theme: "cyber-grid" });
   if (level === 3) rewards.push({ id: rewardId("premium", level, "midnight-circuit"), level, track: "premium", kind: "board_style", title: "Поле «Полночная схема»" });
   if (level === 5) rewards.push({ id: rewardId("premium", level, "cell-scan"), level, track: "premium", kind: "animated_cosmetic", title: "Анимация сканирования" });
   if (level === 7) rewards.push({ id: rewardId("premium", level, "library-ink"), level, track: "premium", kind: "theme", title: "Тема «Библиотечные чернила»", theme: "library-ink" });
   if (level === 10) rewards.push({ id: rewardId("premium", level, "title-grid-nomad"), level, track: "premium", kind: "title", title: "Титул: Кочевник сетки" });
+  if (level === 12) rewards.push({ id: rewardId("premium", level, "six-hour-boost"), level, track: "premium", kind: "xp_boost", title: "Буст опыта на 6 часов", boostHours: 6 });
   if (level === 14) rewards.push({ id: rewardId("premium", level, "tumar-line"), level, track: "premium", kind: "kazakh_ornament", title: "Орнамент «Тумар»" });
   if (level === 18) rewards.push({ id: rewardId("premium", level, "signal-jam"), level, track: "premium", kind: "pvp_effect", title: "Эффект арены «Сбой сигнала»" });
+  if (level === 21) rewards.push({ id: rewardId("premium", level, "prism-border"), level, track: "premium", kind: "animated_cosmetic", title: "Профильная рамка «Призма»" });
   if (level === 24) rewards.push({ id: rewardId("premium", level, "handwritten"), level, track: "premium", kind: "number_style", title: "Рукописные цифры", numberStyle: "handwritten" });
+  if (level === 27) rewards.push({ id: rewardId("premium", level, "arena-afterimage"), level, track: "premium", kind: "pvp_effect", title: "Эффект арены «След победы»" });
   if (level === 30) rewards.push({ id: rewardId("premium", level, "season-solver"), level, track: "premium", kind: "title", title: "Титул: Герой сезона" });
-  if (level % 4 === 0) {
-    rewards.push({
-      id: rewardId("premium", level, "diamonds"),
-      level,
-      track: "premium",
-      kind: "diamonds",
-      title: `${level + 4} алмазов`,
-      diamonds: level + 4
-    });
-  }
   return rewards;
 }
 
