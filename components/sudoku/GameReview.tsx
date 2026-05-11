@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import type { AreaPerformance, GameMoveLog, GameReport, HeatmapCell, KeyMoment } from "@/types";
+import { useMemo, useState, type CSSProperties } from "react";
+import type { AreaPerformance, GameMoveLog, GameReport, HeatmapCell, KeyMoment, MoveQuality } from "@/types";
 import { cellLabel, formatReviewDuration, techniqueLabel } from "@/lib/domain/gameReview";
 import { Board } from "./Board";
 
@@ -25,12 +25,12 @@ function heatColor(intensity: number): string {
 }
 
 function moveTone(move: GameMoveLog): string {
-  if (move.action === "hint") return "bg-sky-500";
-  if (move.action === "check") return "bg-indigo-500";
-  if (move.action === "place" && !move.correct) return "bg-red-500";
-  if (move.msSincePrevious >= 10_000) return "bg-amber-400";
-  if (move.action === "erase") return "bg-slate-400";
-  return "bg-emerald-500";
+  if (move.action === "hint") return "review-move-hint";
+  if (move.action === "check") return "review-move-check";
+  if (move.action === "place" && !move.correct) return "review-move-error";
+  if (move.msSincePrevious >= 10_000) return "review-move-slow";
+  if (move.action === "erase") return "review-move-erase";
+  return "review-move-good";
 }
 
 function actionLabel(move: GameMoveLog): string {
@@ -44,16 +44,25 @@ function bestAreaLabel(prefix: string, area: AreaPerformance): string {
   return `${prefix} ${area.index + 1}: ${area.moves ? formatReviewDuration(area.avgMs) : "нет ходов"}${area.errors ? `, ошибок ${area.errors}` : ""}`;
 }
 
+function qualityLabel(quality: MoveQuality): string {
+  if (quality === "mistake") return "ошибка";
+  if (quality === "missed") return "можно быстрее";
+  if (quality === "assisted") return "подсказка";
+  if (quality === "optimal") return "сильный ход";
+  if (quality === "good") return "верно";
+  return "нейтрально";
+}
+
 function HeatmapGrid({ heatmap }: { heatmap: HeatmapCell[][] }) {
   return (
-    <div className="grid aspect-square w-full max-w-[240px] grid-cols-9 overflow-hidden rounded-lg border border-slate-200 bg-white" aria-label="Тепловая карта 9 на 9">
+    <div className="review-heatmap" aria-label="Тепловая карта 9 на 9">
       {heatmap.flatMap((row) =>
         row.map((cell) => (
           <div
             key={`${cell.row}-${cell.col}`}
-            className={`grid place-items-center border-b border-r border-white/70 text-[10px] font-black ${
-              cell.col === 2 || cell.col === 5 ? "border-r-slate-400" : ""
-            } ${cell.row === 2 || cell.row === 5 ? "border-b-slate-400" : ""}`}
+            className={`review-heatmap-cell ${cell.col === 2 || cell.col === 5 ? "review-heatmap-cell-border-right" : ""} ${
+              cell.row === 2 || cell.row === 5 ? "review-heatmap-cell-border-bottom" : ""
+            }`}
             style={{ background: heatColor(cell.intensity), color: cell.intensity > 0.72 ? "white" : "#0f172a" }}
             title={`${cellLabel(cell.row, cell.col)}: ${formatReviewDuration(cell.avgMs)}, ошибок ${cell.errors}, пауз ${cell.pauses}`}
           >
@@ -67,58 +76,67 @@ function HeatmapGrid({ heatmap }: { heatmap: HeatmapCell[][] }) {
 
 export function GameReviewSummary({ report, onOpenDetails }: GameReviewSummaryProps) {
   const { weaknessProfile, session } = report;
+  const mistakeCount = session.moves.filter((move) => move.action === "place" && !move.correct).length;
+  const scoreStyle = { "--review-score": `${Math.max(0, Math.min(100, report.score)) * 3.6}deg` } as CSSProperties;
+
   return (
-    <section className="grid gap-4 text-left">
-      <div className="text-center">
-        <p className="text-xs font-black uppercase text-primary">Game Review</p>
-        <div className="mt-1 text-5xl font-black text-slate-950">{report.score}</div>
-        <p className="text-sm font-bold text-slate-500">итоговый счёт из 100</p>
-      </div>
-
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <div className="rounded-lg bg-slate-50 p-3 text-center">
-          <strong className="block text-lg text-slate-950">{formatReviewDuration(session.stats.totalTimeMs)}</strong>
-          <span className="text-xs font-bold text-slate-500">время</span>
+    <section className="review-summary">
+      <div className="review-score-card">
+        <div className="review-score-ring" style={scoreStyle}>
+          <strong>{report.score}</strong>
+          <span>/100</span>
         </div>
-        <div className="rounded-lg bg-slate-50 p-3 text-center">
-          <strong className="block text-lg text-slate-950">{session.moves.filter((move) => move.action === "place" && !move.correct).length}</strong>
-          <span className="text-xs font-bold text-slate-500">ошибки</span>
-        </div>
-        <div className="rounded-lg bg-slate-50 p-3 text-center">
-          <strong className="block text-lg text-slate-950">{session.stats.hintsUsed}</strong>
-          <span className="text-xs font-bold text-slate-500">подсказки</span>
-        </div>
-        <div className="rounded-lg bg-slate-50 p-3 text-center">
-          <strong className="block text-lg text-slate-950">{session.stats.checksUsed}</strong>
-          <span className="text-xs font-bold text-slate-500">проверки</span>
+        <div>
+          <p className="review-kicker">ИИ-анализ</p>
+          <h3>Картина партии</h3>
+          <span>Где ошибался, где думал дольше и какие техники стоит потренировать.</span>
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-center">
+      <div className="review-metric-grid">
+        <ReviewMetric label="время" value={formatReviewDuration(session.stats.totalTimeMs)} />
+        <ReviewMetric label="ошибки" value={mistakeCount} />
+        <ReviewMetric label="подсказки" value={session.stats.hintsUsed} />
+        <ReviewMetric label="проверки" value={session.stats.checksUsed} />
+      </div>
+
+      <div className="review-insight-grid">
         <HeatmapGrid heatmap={weaknessProfile.heatmap} />
-        <div className="grid gap-2 text-sm font-semibold text-slate-700">
-          <p>Точность: <strong>{weaknessProfile.accuracy}%</strong></p>
-          <p>Средний ход: <strong>{formatReviewDuration(weaknessProfile.averageMoveMs)}</strong></p>
-          <p>Самостоятельность: <strong>{weaknessProfile.independence}%</strong></p>
+        <div className="review-readout">
+          <ProfileBar label="Точность" value={weaknessProfile.accuracy} />
+          <ProfileBar label="Самостоятельность" value={weaknessProfile.independence} />
+          <p>
+            Средний ход: <strong>{formatReviewDuration(weaknessProfile.averageMoveMs)}</strong>
+          </p>
+          <small>Чем ярче клетка на карте, тем больше там пауз, ошибок или долгих решений.</small>
         </div>
       </div>
 
       <button type="button" className="btn-primary w-full" onClick={onOpenDetails}>
-        Подробный разбор
+        Открыть пошаговый разбор
       </button>
     </section>
   );
 }
 
+function ReviewMetric({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="review-metric">
+      <strong>{value}</strong>
+      <span>{label}</span>
+    </div>
+  );
+}
+
 function ProfileBar({ label, value }: { label: string; value: number }) {
   return (
-    <div>
-      <div className="flex items-center justify-between gap-3 text-xs font-black text-slate-600">
+    <div className="review-profile-bar">
+      <div>
         <span>{label}</span>
         <span>{value}%</span>
       </div>
-      <div className="mt-1 h-2 overflow-hidden rounded-full bg-slate-100">
-        <span className="block h-full rounded-full bg-primary" style={{ width: `${Math.max(0, Math.min(100, value))}%` }} />
+      <div>
+        <span style={{ width: `${Math.max(0, Math.min(100, value))}%` }} />
       </div>
     </div>
   );
@@ -126,40 +144,40 @@ function ProfileBar({ label, value }: { label: string; value: number }) {
 
 function Timeline({ moves, currentIndex, onSelect }: { moves: GameMoveLog[]; currentIndex: number; onSelect: (index: number) => void }) {
   return (
-    <div className="flex min-h-12 items-center gap-1 overflow-x-auto rounded-lg border border-slate-200 bg-white p-2">
-      {moves.map((move, index) => (
-        <button
-          key={move.moveNumber}
-          type="button"
-          className={`h-7 min-w-7 rounded-full text-[10px] font-black text-white shadow-sm ${moveTone(move)} ${
-            currentIndex === index ? "ring-2 ring-slate-950 ring-offset-2" : ""
-          }`}
-          onClick={() => onSelect(index)}
-          title={`#${move.moveNumber}: ${actionLabel(move)}, ${cellLabel(Math.max(0, move.row), Math.max(0, move.col))}`}
-        >
-          {move.moveNumber}
-        </button>
-      ))}
+    <div className="review-timeline" aria-label="Таймлайн ходов">
+      <div className="review-timeline-track">
+        {moves.map((move, index) => (
+          <button
+            key={move.moveNumber}
+            type="button"
+            className={`review-move-dot ${moveTone(move)} ${currentIndex === index ? "review-move-dot-active" : ""}`}
+            onClick={() => onSelect(index)}
+            title={`#${move.moveNumber}: ${actionLabel(move)}, ${cellLabel(Math.max(0, move.row), Math.max(0, move.col))}`}
+          >
+            {move.moveNumber}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
 
 function KeyMomentList({ moments, onSelect }: { moments: KeyMoment[]; onSelect: (moveNumber: number) => void }) {
   if (moments.length === 0) {
-    return <p className="rounded-lg bg-slate-50 p-3 text-sm font-semibold text-slate-600">Критичных моментов не найдено.</p>;
+    return <p className="review-empty">Критичных моментов не найдено.</p>;
   }
 
   return (
-    <div className="grid gap-2">
+    <div className="review-moment-list">
       {moments.map((moment) => (
         <button
           key={moment.id}
           type="button"
-          className="rounded-lg border border-slate-200 bg-white p-3 text-left transition hover:border-violet-200 hover:bg-violet-50"
+          className={`review-moment-card review-moment-${moment.severity}`}
           onClick={() => onSelect(moment.moveNumber)}
         >
-          <span className="block text-sm font-black text-slate-950">{moment.title}</span>
-          <span className="mt-1 block text-xs font-semibold leading-5 text-slate-600">{moment.description}</span>
+          <span>{moment.title}</span>
+          <small>{moment.description}</small>
         </button>
       ))}
     </div>
@@ -181,6 +199,7 @@ export function GameReviewDetails({ report }: GameReviewDetailsProps) {
   const speedScore = Math.max(0, Math.round(100 - (report.weaknessProfile.averageMoveMs / 15_000) * 100));
   const weakBlock = [...report.weaknessProfile.byBlock].sort((a, b) => b.errors - a.errors || b.avgMs - a.avgMs)[0];
   const weakDigit = [...report.weaknessProfile.byDigit].sort((a, b) => b.errors - a.errors || b.avgMs - a.avgMs)[0];
+  const currentQuality = currentAnalysis ? qualityLabel(currentAnalysis.quality) : "позиция";
 
   function selectMove(moveNumber: number) {
     const index = report.session.moves.findIndex((move) => move.moveNumber === moveNumber);
@@ -188,68 +207,99 @@ export function GameReviewDetails({ report }: GameReviewDetailsProps) {
   }
 
   return (
-    <div className="grid gap-5 text-left">
-      <section className="grid gap-3">
-        <div>
-          <p className="text-xs font-black uppercase text-primary">Воспроизведение партии</p>
-          <h3 className="text-xl font-black text-slate-950">Ход {currentMove?.moveNumber ?? 0} из {report.session.moves.length}</h3>
+    <div className="review-details">
+      <section className="review-section">
+        <div className="review-section-head">
+          <p>Воспроизведение партии</p>
+          <h3>Ход {currentMove?.moveNumber ?? 0} из {report.session.moves.length}</h3>
+          <span>Нажимай на точки таймлайна, чтобы увидеть состояние поля и объяснение ИИ.</span>
         </div>
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)] lg:items-start">
-          <Board
-            board={board}
-            given={report.session.given}
-            notes={notes}
-            selected={selected}
-            errors={errors}
-            locked
-            onSelect={() => undefined}
-          />
-          <div className="grid gap-3">
-            <div className="rounded-lg bg-slate-50 p-3">
-              <p className="text-sm font-black text-slate-950">{currentMove ? actionLabel(currentMove) : "Старт"}</p>
-              <p className="mt-1 text-sm font-semibold text-slate-600">
-                {currentMove ? `${cellLabel(Math.max(0, currentMove.row), Math.max(0, currentMove.col))}, ${formatReviewDuration(currentMove.msSincePrevious)} после прошлого действия` : "Начальная позиция"}
-              </p>
-              {currentAnalysis ? <p className="mt-2 text-sm leading-6 text-slate-700">{currentAnalysis.explanation}</p> : null}
-              {currentAnalysis?.suggestedMove ? (
-                <p className="mt-2 rounded-lg bg-white p-3 text-sm font-bold text-slate-700">
-                  Совет: {techniqueLabel(currentAnalysis.suggestedMove.technique)}{" -> "}{currentAnalysis.suggestedMove.digit} в {cellLabel(currentAnalysis.suggestedMove.row, currentAnalysis.suggestedMove.col)}
-                </p>
-              ) : null}
+        <div className="review-playback-grid">
+          <div className="review-board-card">
+            <Board
+              board={board}
+              given={report.session.given}
+              notes={notes}
+              selected={selected}
+              errors={errors}
+              locked
+              onSelect={() => undefined}
+            />
+          </div>
+          <div className="review-current-card">
+            <div className="review-current-top">
+              <span>{currentQuality}</span>
+              <strong>{currentMove ? actionLabel(currentMove) : "Старт"}</strong>
             </div>
-            <Timeline moves={report.session.moves} currentIndex={currentIndex} onSelect={setCurrentIndex} />
+            <p>
+              {currentMove
+                ? `${cellLabel(Math.max(0, currentMove.row), Math.max(0, currentMove.col))}, ${formatReviewDuration(currentMove.msSincePrevious)} после прошлого действия`
+                : "Начальная позиция"}
+            </p>
+            {currentAnalysis ? <div className="review-explanation">{currentAnalysis.explanation}</div> : null}
+            <div className="review-mini-grid">
+              <span>
+                <small>Техника</small>
+                <strong>{currentAnalysis ? techniqueLabel(currentAnalysis.technique) : "нет"}</strong>
+              </span>
+              <span>
+                <small>Цифра</small>
+                <strong>{currentMove?.digit || "-"}</strong>
+              </span>
+            </div>
+              {currentAnalysis?.suggestedMove ? (
+              <div className="review-suggestion">
+                <small>Лучший следующий шаг</small>
+                <strong>
+                  {currentAnalysis.suggestedMove.digit} в {cellLabel(currentAnalysis.suggestedMove.row, currentAnalysis.suggestedMove.col)}
+                </strong>
+                <span>{techniqueLabel(currentAnalysis.suggestedMove.technique)}</span>
+              </div>
+              ) : null}
           </div>
         </div>
+        <Timeline moves={report.session.moves} currentIndex={currentIndex} onSelect={setCurrentIndex} />
       </section>
 
-      <section className="grid gap-3">
-        <div>
-          <p className="text-xs font-black uppercase text-primary">Ключевые моменты</p>
-          <h3 className="text-xl font-black text-slate-950">Самые важные развилки</h3>
+      <section className="review-section">
+        <div className="review-section-head">
+          <p>Ключевые моменты</p>
+          <h3>Ошибки и развилки</h3>
+          <span>Это места, где партия замедлилась, появилась ошибка или ИИ видел более простой путь.</span>
         </div>
         <KeyMomentList moments={report.keyMoments} onSelect={selectMove} />
       </section>
 
-      <section className="grid gap-3">
-        <div>
-          <p className="text-xs font-black uppercase text-primary">Профиль игрока</p>
-          <h3 className="text-xl font-black text-slate-950">Скорость, точность, самостоятельность</h3>
+      <section className="review-section">
+        <div className="review-section-head">
+          <p>Профиль игрока</p>
+          <h3>Что видно по партии</h3>
+          <span>Три показателя показывают, насколько уверенно ты решал без лишних проверок.</span>
         </div>
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-          <div className="grid gap-3 rounded-lg border border-slate-200 bg-white p-3">
+        <div className="review-profile-grid">
+          <div className="review-card">
             <ProfileBar label="Точность" value={report.weaknessProfile.accuracy} />
             <ProfileBar label="Скорость" value={speedScore} />
             <ProfileBar label="Самостоятельность" value={report.weaknessProfile.independence} />
           </div>
-          <div className="grid gap-2 rounded-lg border border-slate-200 bg-white p-3 text-sm font-semibold text-slate-700">
+          <div className="review-card review-weak-card">
             <p>{bestAreaLabel("Слабый блок", weakBlock)}</p>
             <p>{bestAreaLabel("Сложная цифра", weakDigit)}</p>
             <p>Стирания: {report.session.stats.erasures}</p>
           </div>
         </div>
-        <div className="grid gap-2">
-          {report.recommendations.map((item) => (
-            <p key={item} className="rounded-lg bg-cyan-50 p-3 text-sm font-bold leading-6 text-slate-800">
+      </section>
+
+      <section className="review-section review-recommendation-section">
+        <div className="review-section-head">
+          <p>Рекомендации</p>
+          <h3>Что делать в следующей партии</h3>
+          <span>Короткий план тренировки по твоим ошибкам.</span>
+        </div>
+        <div className="review-recommendation-list">
+          {report.recommendations.map((item, index) => (
+            <p key={item} className="review-recommendation">
+              <span>{index + 1}</span>
               {item}
             </p>
           ))}
