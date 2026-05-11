@@ -84,12 +84,12 @@ export function DiamondModal({ open, onClose }: DiamondModalProps) {
       const payload = (await response.json().catch(() => ({}))) as { url?: string; error?: string };
 
       if (!response.ok || !payload.url) {
-        throw new Error(payload.error ?? "Stripe Checkout сейчас недоступен");
+        throw new Error(payload.error ?? "Оплата Stripe сейчас недоступна");
       }
 
       window.location.assign(payload.url);
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Не удалось открыть Stripe Checkout");
+      setNotice(error instanceof Error ? error.message : "Не удалось открыть оплату Stripe");
       setCheckoutLoading(null);
     }
   }
@@ -132,7 +132,7 @@ export function DiamondModal({ open, onClose }: DiamondModalProps) {
             <div className="min-w-0">
               <p className="text-sm font-semibold text-cyan-200">Судоку</p>
               <h2 className="mt-1 text-3xl font-black">Магазин алмазов</h2>
-              <p className="mt-2 text-sm text-slate-300">Судоку Пасс и наборы алмазов открываются через Stripe Checkout.</p>
+              <p className="mt-2 text-sm text-slate-300">Судоку Пасс и наборы алмазов открываются через страницу оплаты Stripe.</p>
             </div>
           </div>
         </div>
@@ -174,7 +174,7 @@ export function DiamondModal({ open, onClose }: DiamondModalProps) {
                     <strong>{pack.price}</strong>
                   </div>
                   <button type="button" className="btn-primary mt-4 w-full" onClick={() => startPackCheckout(pack.id)} disabled={checkoutLoading !== null}>
-                    {checkoutLoading === pack.id ? "Открываем Stripe..." : "Купить"}
+                    {checkoutLoading === pack.id ? "Открываем оплату..." : "Купить"}
                   </button>
                 </article>
               ))}
@@ -194,7 +194,7 @@ export function DiamondModal({ open, onClose }: DiamondModalProps) {
               ))}
             </ul>
             <button type="button" className="btn-primary mt-5 w-full" onClick={startSubscriptionCheckout} disabled={checkoutLoading !== null}>
-              {checkoutLoading === "sudoku_pass" ? "Открываем Stripe..." : "Купить Судоку Пасс"}
+              {checkoutLoading === "sudoku_pass" ? "Открываем оплату..." : "Купить Судоку Пасс"}
             </button>
           </aside>
         </div>

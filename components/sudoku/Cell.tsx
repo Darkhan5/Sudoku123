@@ -83,7 +83,7 @@ export function Cell({
           onOrnamentInfo(value);
         }
       }}
-      disabled={(locked && !selected) || frozen}
+      disabled={locked || frozen}
       aria-label={`Строка ${row + 1}, столбец ${col + 1}${value ? `, значение ${value}` : ", пусто"}${frozen ? ", временно заморожено" : ""}`}
       aria-selected={selected}
       aria-invalid={error}

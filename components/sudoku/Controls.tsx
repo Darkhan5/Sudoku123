@@ -15,6 +15,7 @@ interface ControlsProps {
   onUndo: () => void;
   onToggleNotes: () => void;
   onErase: () => void;
+  onCheck?: () => void;
   onHint: () => void;
   onToggleOrnament: () => void;
   onOpenOrnamentLegend: () => void;
@@ -32,6 +33,7 @@ export function Controls({
   onUndo,
   onToggleNotes,
   onErase,
+  onCheck,
   onHint,
   onToggleOrnament,
   onOpenOrnamentLegend
@@ -67,15 +69,21 @@ export function Controls({
           disabled={locked}
           onClick={onToggleNotes}
         >
-          <span aria-hidden>N</span>
+          <span aria-hidden>З</span>
           <span>Заметки</span>
         </button>
         <button type="button" className="action-button" disabled={locked} onClick={onErase}>
           <span aria-hidden>⌫</span>
           <span>Стереть</span>
         </button>
+        {onCheck ? (
+          <button type="button" className="action-button" disabled={locked} onClick={onCheck}>
+            <span aria-hidden>✓</span>
+            <span>Проверить</span>
+          </button>
+        ) : null}
         <button type="button" className="hint-button" disabled={locked} onClick={onHint}>
-          <span aria-hidden>AI</span>
+          <span aria-hidden>ИИ</span>
           <span>Подсказка</span>
         </button>
         <button
@@ -84,7 +92,7 @@ export function Controls({
           disabled={locked}
           onClick={onToggleOrnament}
         >
-          <span aria-hidden>{canUseOrnament ? (ornamentMode ? "1" : "O") : "◆"}</span>
+          <span aria-hidden>{canUseOrnament ? (ornamentMode ? "1" : "Ө") : "◆"}</span>
           <span>{ornamentMode ? "Цифры" : "Орнамент"}</span>
         </button>
         <button type="button" className="action-button" disabled={locked || !ornamentMode} onClick={onOpenOrnamentLegend}>

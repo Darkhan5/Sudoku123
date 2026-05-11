@@ -106,15 +106,15 @@ export async function fulfillCheckoutSession(
   now: () => Date = () => new Date()
 ): Promise<FulfillmentResult> {
   const sessionId = session.id;
-  if (!sessionId) return { fulfilled: false, alreadyProcessed: false, reason: "Missing Stripe session id." };
-  if (session.status && session.status !== "complete") return { fulfilled: false, alreadyProcessed: false, reason: "Stripe session is not complete." };
+  if (!sessionId) return { fulfilled: false, alreadyProcessed: false, reason: "Не найден идентификатор сессии Stripe." };
+  if (session.status && session.status !== "complete") return { fulfilled: false, alreadyProcessed: false, reason: "Сессия Stripe ещё не завершена." };
   if (session.mode === "payment" && session.payment_status && session.payment_status !== "paid") {
-    return { fulfilled: false, alreadyProcessed: false, reason: "Stripe payment is not paid." };
+    return { fulfilled: false, alreadyProcessed: false, reason: "Оплата Stripe ещё не оплачена." };
   }
 
   const metadata = session.metadata ?? {};
   const email = normalizeEmail(session.customer_details?.email ?? session.customer_email);
-  if (!email) return { fulfilled: false, alreadyProcessed: false, reason: "Stripe session has no customer email." };
+  if (!email) return { fulfilled: false, alreadyProcessed: false, reason: "В сессии Stripe нет email покупателя." };
 
   const playerId = asPlayerId(metadata.playerId);
   const records = await store.read();
@@ -147,7 +147,7 @@ export async function fulfillCheckoutSession(
   let result: FulfillmentResult;
   if (metadata.purchase === "diamond_pack") {
     const pack = getDiamondStorePack(metadata.packId);
-    if (!pack) return { fulfilled: false, alreadyProcessed: false, email, playerId, reason: "Unknown Diamond Store pack." };
+    if (!pack) return { fulfilled: false, alreadyProcessed: false, email, playerId, reason: "Неизвестный набор алмазов." };
 
     const diamonds = getDiamondStorePackTotalDiamonds(pack);
     record.diamonds += diamonds;
@@ -180,7 +180,7 @@ export async function fulfillCheckoutSession(
       databasePlan: record.plan
     };
   } else {
-    return { fulfilled: false, alreadyProcessed: false, email, playerId, reason: "Unsupported Stripe checkout metadata." };
+    return { fulfilled: false, alreadyProcessed: false, email, playerId, reason: "Метаданные оплаты Stripe не поддерживаются." };
   }
 
   if (existingIndex >= 0) {

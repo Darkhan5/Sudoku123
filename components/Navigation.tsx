@@ -6,7 +6,7 @@ import { DiamondCounter } from "@/components/ui/DiamondCounter";
 import { StreakBadge } from "@/components/ui/StreakBadge";
 
 const NAV_ITEMS = [
-  { href: "/", label: "Сегодня", icon: "today" },
+  { href: "/", label: "Ежедневный", icon: "today" },
   { href: "/play", label: "Играть", icon: "play" },
   { href: "/pass", label: "Пасс", icon: "pass" },
   { href: "/arena", label: "Арена", icon: "pvp" },
@@ -86,10 +86,10 @@ export function Navigation() {
     <>
       <header className="fixed inset-x-0 top-0 z-30 hidden h-16 border-b border-slate-200 bg-white/90 backdrop-blur md:block">
         <div className="mx-auto flex h-full max-w-6xl items-center justify-between px-6">
-          <Link href="/" className="text-lg font-black text-slate-950" aria-label="Sudoku">
-            Sudoku
+          <Link href="/" className="text-lg font-black text-slate-950" aria-label="Судоку">
+            Судоку
           </Link>
-          <nav className="flex items-center gap-1" aria-label="Main navigation">
+          <nav className="flex items-center gap-1" aria-label="Главная навигация">
             {NAV_ITEMS.map((item) => {
               const active = pathname === item.href;
               return (
@@ -110,8 +110,8 @@ export function Navigation() {
       </header>
 
       <header className="fixed inset-x-0 top-0 z-30 flex h-16 items-center justify-between border-b border-slate-200 bg-white/95 px-4 backdrop-blur md:hidden">
-        <Link href="/" className="text-base font-black text-slate-950" aria-label="Sudoku">
-          Sudoku
+        <Link href="/" className="text-base font-black text-slate-950" aria-label="Судоку">
+          Судоку
         </Link>
         <div className="flex items-center gap-2">
           <StreakBadge />
@@ -121,7 +121,7 @@ export function Navigation() {
 
       <nav
         className="fixed inset-x-0 bottom-0 z-30 grid h-16 grid-cols-6 border-t border-slate-200 bg-white/95 px-2 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
-        aria-label="Main navigation"
+        aria-label="Главная навигация"
       >
         {NAV_ITEMS.map((item) => {
           const active = pathname === item.href;

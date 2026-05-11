@@ -46,12 +46,12 @@ export function PlayerCard({ player }: PlayerCardProps) {
         <div className="mt-3">
           <div className="flex items-center justify-between text-xs font-bold text-slate-500">
             <span>{rankLabel(rank)}</span>
-            <span>{xpLeft > 0 ? `До следующего ранга: ${xpLeft} XP` : "Максимальный ранг"}</span>
+            <span>{xpLeft > 0 ? `До следующего ранга: ${xpLeft} опыта` : "Максимальный ранг"}</span>
           </div>
           <div className="progress-rail mt-1" aria-label="Прогресс ранга">
             <span style={{ width: `${xpProgress}%` }} />
           </div>
-          <p className="mt-1 text-xs font-semibold text-slate-500">{xp.toLocaleString("ru-RU")} XP всего</p>
+          <p className="mt-1 text-xs font-semibold text-slate-500">{xp.toLocaleString("ru-RU")} опыта всего</p>
         </div>
       </div>
 

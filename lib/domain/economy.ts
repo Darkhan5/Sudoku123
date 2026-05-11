@@ -41,7 +41,7 @@ export const DIAMOND_EARNING_RULES: DiamondRewardRule[] = [
   },
   {
     id: "daily",
-    title: "Задача дня",
+    title: "Ежедневный судоку",
     description: "+1 💎 за новый игровой день.",
     amount: 1
   },

@@ -6,7 +6,7 @@ interface DiamondGlyphProps {
   label?: string;
 }
 
-export function DiamondGlyph({ className = "", decorative = true, label = "Diamond" }: DiamondGlyphProps) {
+export function DiamondGlyph({ className = "", decorative = true, label = "Алмаз" }: DiamondGlyphProps) {
   return (
     <span
       className={`diamond-glyph ${className}`}

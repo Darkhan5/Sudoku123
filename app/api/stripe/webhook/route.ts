@@ -8,7 +8,7 @@ export const runtime = "nodejs";
 export async function POST(request: Request) {
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
   if (!webhookSecret) {
-    return NextResponse.json({ error: "Stripe webhook is not configured. Add STRIPE_WEBHOOK_SECRET to .env.local locally or Vercel Environment Variables in production." }, { status: 503 });
+    return NextResponse.json({ error: "Вебхук Stripe не настроен. Добавь STRIPE_WEBHOOK_SECRET в .env.local локально или в переменные окружения Vercel." }, { status: 503 });
   }
 
   const rawBody = await request.text();
@@ -18,7 +18,7 @@ export async function POST(request: Request) {
   try {
     event = constructStripeWebhookEvent<StripeCheckoutSessionForFulfillment>(rawBody, signature, webhookSecret);
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Invalid Stripe webhook." }, { status: 400 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Некорректный вебхук Stripe." }, { status: 400 });
   }
 
   if (event.type !== "checkout.session.completed") {
@@ -27,7 +27,7 @@ export async function POST(request: Request) {
 
   const session = event.data?.object;
   if (!session) {
-    return NextResponse.json({ error: "Stripe webhook has no checkout session object." }, { status: 400 });
+    return NextResponse.json({ error: "В вебхуке Stripe нет объекта сессии оплаты." }, { status: 400 });
   }
 
   try {
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
       seasonId: fulfillment.passSeasonId ?? null
     });
   } catch (error) {
-    console.error("Stripe webhook fulfillment error:", error);
-    return NextResponse.json({ error: "Could not fulfill Stripe checkout session." }, { status: 500 });
+    console.error("Ошибка начисления вебхука Stripe:", error);
+    return NextResponse.json({ error: "Не удалось начислить покупку из сессии Stripe." }, { status: 500 });
   }
 }

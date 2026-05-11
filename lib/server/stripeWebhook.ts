@@ -38,17 +38,17 @@ export function constructStripeWebhookEvent<T = unknown>(
   toleranceSeconds = 300,
   nowSeconds = Math.floor(Date.now() / 1000)
 ): StripeWebhookEvent<T> {
-  if (!signatureHeader) throw new Error("Missing Stripe-Signature header.");
-  if (!secret) throw new Error("Missing Stripe webhook signing secret.");
+  if (!signatureHeader) throw new Error("Нет заголовка Stripe-Signature.");
+  if (!secret) throw new Error("Нет секретного ключа подписи вебхука Stripe.");
 
   const { timestamp, signatures } = parseStripeSignatureHeader(signatureHeader);
-  if (!timestamp || !Number.isFinite(timestamp)) throw new Error("Invalid Stripe webhook timestamp.");
-  if (Math.abs(nowSeconds - timestamp) > toleranceSeconds) throw new Error("Stripe webhook timestamp is outside tolerance.");
+  if (!timestamp || !Number.isFinite(timestamp)) throw new Error("Некорректное время вебхука Stripe.");
+  if (Math.abs(nowSeconds - timestamp) > toleranceSeconds) throw new Error("Время вебхука Stripe вне допустимого окна.");
 
   const signedPayload = `${timestamp}.${payload}`;
   const expectedSignature = createHmac("sha256", secret).update(signedPayload, "utf8").digest("hex");
   if (!signatures.some((signature) => signatureMatches(expectedSignature, signature))) {
-    throw new Error("Stripe webhook signature verification failed.");
+    throw new Error("Не удалось проверить подпись вебхука Stripe.");
   }
 
   return JSON.parse(payload) as StripeWebhookEvent<T>;

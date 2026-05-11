@@ -193,6 +193,22 @@ select:focus-visible {
     @apply flex flex-wrap items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm;
   }
 
+  .start-game-panel {
+    @apply flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-cyan-200 bg-cyan-50 p-4 shadow-sm;
+  }
+
+  .start-game-panel p {
+    @apply text-xs font-black uppercase tracking-wide text-cyan-700;
+  }
+
+  .start-game-panel h2 {
+    @apply mt-1 text-xl font-black text-slate-950;
+  }
+
+  .start-game-panel span {
+    @apply mt-1 block text-sm font-semibold text-slate-600;
+  }
+
   .select-control,
   .input-control {
     @apply min-h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-800 shadow-sm;
@@ -1229,7 +1245,7 @@ select:focus-visible {
 }
 
 .cell-frozen::after {
-  content: "LOCK";
+  content: "СТОП";
   position: absolute;
   inset: auto 0.2rem 0.2rem 0.2rem;
   z-index: 4;
@@ -3047,6 +3063,216 @@ select:focus-visible {
   font-size: 0.82rem;
   font-weight: 750;
   line-height: 1.4;
+}
+
+.pass-reward-item-highlight {
+  border: 1px solid #22d3ee;
+  box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.18), 0 18px 38px rgba(14, 165, 233, 0.14);
+}
+
+:root[data-theme="cyber-grid"] {
+  --theme-readable-text: #e2f8ff;
+  --theme-strong-text: #f8fdff;
+  --theme-muted-text: #93b7c4;
+  --theme-surface: rgba(11, 23, 34, 0.94);
+  --theme-surface-raised: rgba(16, 35, 53, 0.94);
+  --theme-surface-soft: rgba(103, 232, 249, 0.1);
+  --theme-border-muted: rgba(103, 232, 249, 0.18);
+  --theme-accent: #67e8f9;
+  --theme-accent-soft: rgba(34, 211, 238, 0.14);
+}
+
+:root[data-theme="diamond-black"] {
+  --theme-readable-text: #f8fafc;
+  --theme-strong-text: #ffffff;
+  --theme-muted-text: #a7b0c5;
+  --theme-surface: #15152b;
+  --theme-surface-raised: #1a1a2e;
+  --theme-surface-soft: #10243a;
+  --theme-border-muted: #2a2a4a;
+  --theme-accent: #67e8f9;
+  --theme-accent-soft: rgba(14, 165, 233, 0.16);
+}
+
+:root[data-theme="cyber-grid"] .pass-actions,
+:root[data-theme="cyber-grid"] .start-game-panel,
+:root[data-theme="cyber-grid"] .pass-level-row,
+:root[data-theme="cyber-grid"] .pass-track-card,
+:root[data-theme="cyber-grid"] .pass-reward-item,
+:root[data-theme="cyber-grid"] .pass-empty-reward,
+:root[data-theme="cyber-grid"] .pass-task,
+:root[data-theme="cyber-grid"] .cosmetic-choice,
+:root[data-theme="cyber-grid"] .accessibility-card,
+:root[data-theme="cyber-grid"] .setting-toggle,
+:root[data-theme="cyber-grid"] .diamond-shop-pack,
+:root[data-theme="cyber-grid"] .diamond-membership-panel,
+:root[data-theme="cyber-grid"] .leaderboard-current,
+:root[data-theme="cyber-grid"] .icon-tile,
+:root[data-theme="cyber-grid"] .streak-day,
+:root[data-theme="cyber-grid"] .diamond-wallet-row,
+:root[data-theme="cyber-grid"] .arena-friend-status,
+:root[data-theme="cyber-grid"] .sabotage-card,
+:root[data-theme="diamond-black"] .pass-actions,
+:root[data-theme="diamond-black"] .start-game-panel,
+:root[data-theme="diamond-black"] .pass-level-row,
+:root[data-theme="diamond-black"] .pass-track-card,
+:root[data-theme="diamond-black"] .pass-reward-item,
+:root[data-theme="diamond-black"] .pass-empty-reward,
+:root[data-theme="diamond-black"] .pass-task,
+:root[data-theme="diamond-black"] .cosmetic-choice,
+:root[data-theme="diamond-black"] .accessibility-card,
+:root[data-theme="diamond-black"] .setting-toggle,
+:root[data-theme="diamond-black"] .diamond-shop-pack,
+:root[data-theme="diamond-black"] .diamond-membership-panel,
+:root[data-theme="diamond-black"] .leaderboard-current,
+:root[data-theme="diamond-black"] .icon-tile,
+:root[data-theme="diamond-black"] .streak-day,
+:root[data-theme="diamond-black"] .diamond-wallet-row,
+:root[data-theme="diamond-black"] .arena-friend-status,
+:root[data-theme="diamond-black"] .sabotage-card {
+  border-color: var(--theme-border-muted);
+  background: var(--theme-surface-raised);
+  color: var(--theme-readable-text);
+}
+
+:root[data-theme="cyber-grid"] .pass-track-card-premium,
+:root[data-theme="cyber-grid"] .cosmetic-choice-locked,
+:root[data-theme="diamond-black"] .pass-track-card-premium,
+:root[data-theme="diamond-black"] .cosmetic-choice-locked {
+  background:
+    repeating-linear-gradient(135deg, rgba(103, 232, 249, 0.06) 0 4px, transparent 4px 10px),
+    var(--theme-surface-raised);
+}
+
+:root[data-theme="cyber-grid"] .pass-track-card-complete,
+:root[data-theme="cyber-grid"] .pass-reward-item-claimed,
+:root[data-theme="cyber-grid"] .pass-task-complete,
+:root[data-theme="cyber-grid"] .cosmetic-choice-active,
+:root[data-theme="cyber-grid"] .theme-option-active,
+:root[data-theme="diamond-black"] .pass-track-card-complete,
+:root[data-theme="diamond-black"] .pass-reward-item-claimed,
+:root[data-theme="diamond-black"] .pass-task-complete,
+:root[data-theme="diamond-black"] .cosmetic-choice-active,
+:root[data-theme="diamond-black"] .theme-option-active {
+  border-color: var(--theme-accent);
+  background: var(--theme-accent-soft);
+  color: var(--theme-strong-text);
+}
+
+:root[data-theme="cyber-grid"] .pass-reward-item-highlight,
+:root[data-theme="diamond-black"] .pass-reward-item-highlight {
+  border-color: var(--theme-accent);
+  background: linear-gradient(135deg, var(--theme-accent-soft), var(--theme-surface-raised));
+  color: var(--theme-strong-text);
+}
+
+:root[data-theme="cyber-grid"] .pass-section-heading h2,
+:root[data-theme="cyber-grid"] .start-game-panel h2,
+:root[data-theme="cyber-grid"] .pass-track-card-head span,
+:root[data-theme="cyber-grid"] .pass-reward-item strong,
+:root[data-theme="cyber-grid"] .pass-empty-reward strong,
+:root[data-theme="cyber-grid"] .pass-task strong,
+:root[data-theme="cyber-grid"] .cosmetic-choice strong,
+:root[data-theme="cyber-grid"] .accessibility-card h3,
+:root[data-theme="cyber-grid"] .diamond-shop-pack h4,
+:root[data-theme="cyber-grid"] .diamond-membership-panel h3,
+:root[data-theme="cyber-grid"] .diamond-membership-panel strong,
+:root[data-theme="cyber-grid"] .arena-friend-status strong,
+:root[data-theme="diamond-black"] .pass-section-heading h2,
+:root[data-theme="diamond-black"] .start-game-panel h2,
+:root[data-theme="diamond-black"] .pass-track-card-head span,
+:root[data-theme="diamond-black"] .pass-reward-item strong,
+:root[data-theme="diamond-black"] .pass-empty-reward strong,
+:root[data-theme="diamond-black"] .pass-task strong,
+:root[data-theme="diamond-black"] .cosmetic-choice strong,
+:root[data-theme="diamond-black"] .accessibility-card h3,
+:root[data-theme="diamond-black"] .diamond-shop-pack h4,
+:root[data-theme="diamond-black"] .diamond-membership-panel h3,
+:root[data-theme="diamond-black"] .diamond-membership-panel strong,
+:root[data-theme="diamond-black"] .arena-friend-status strong {
+  color: var(--theme-strong-text);
+}
+
+:root[data-theme="cyber-grid"] .pass-section-heading span,
+:root[data-theme="cyber-grid"] .start-game-panel span,
+:root[data-theme="cyber-grid"] .pass-track-card-head em,
+:root[data-theme="cyber-grid"] .pass-reward-item small,
+:root[data-theme="cyber-grid"] .pass-empty-reward small,
+:root[data-theme="cyber-grid"] .pass-task span,
+:root[data-theme="cyber-grid"] .pass-task p,
+:root[data-theme="cyber-grid"] .pass-task small,
+:root[data-theme="cyber-grid"] .cosmetic-choice small,
+:root[data-theme="cyber-grid"] .accessibility-card label,
+:root[data-theme="cyber-grid"] .diamond-membership-panel ul,
+:root[data-theme="cyber-grid"] .arena-friend-status p,
+:root[data-theme="cyber-grid"] .arena-friend-status span,
+:root[data-theme="cyber-grid"] .sabotage-card small,
+:root[data-theme="diamond-black"] .pass-section-heading span,
+:root[data-theme="diamond-black"] .start-game-panel span,
+:root[data-theme="diamond-black"] .pass-track-card-head em,
+:root[data-theme="diamond-black"] .pass-reward-item small,
+:root[data-theme="diamond-black"] .pass-empty-reward small,
+:root[data-theme="diamond-black"] .pass-task span,
+:root[data-theme="diamond-black"] .pass-task p,
+:root[data-theme="diamond-black"] .pass-task small,
+:root[data-theme="diamond-black"] .cosmetic-choice small,
+:root[data-theme="diamond-black"] .accessibility-card label,
+:root[data-theme="diamond-black"] .diamond-membership-panel ul,
+:root[data-theme="diamond-black"] .arena-friend-status p,
+:root[data-theme="diamond-black"] .arena-friend-status span,
+:root[data-theme="diamond-black"] .sabotage-card small {
+  color: var(--theme-muted-text);
+}
+
+:root[data-theme="cyber-grid"] .pass-section-heading p,
+:root[data-theme="cyber-grid"] .start-game-panel p,
+:root[data-theme="cyber-grid"] .pass-task em,
+:root[data-theme="cyber-grid"] .pass-track-card-claimable .pass-track-card-head em,
+:root[data-theme="cyber-grid"] .diamond-shop-pack p,
+:root[data-theme="cyber-grid"] .sabotage-card em,
+:root[data-theme="diamond-black"] .pass-section-heading p,
+:root[data-theme="diamond-black"] .start-game-panel p,
+:root[data-theme="diamond-black"] .pass-task em,
+:root[data-theme="diamond-black"] .pass-track-card-claimable .pass-track-card-head em,
+:root[data-theme="diamond-black"] .diamond-shop-pack p,
+:root[data-theme="diamond-black"] .sabotage-card em {
+  color: var(--theme-accent);
+}
+
+:root[data-theme="cyber-grid"] .pass-section-heading span,
+:root[data-theme="cyber-grid"] .pass-track-card-head em,
+:root[data-theme="cyber-grid"] .pass-premium-pill,
+:root[data-theme="cyber-grid"] .pass-next-pill,
+:root[data-theme="cyber-grid"] .pass-claim-notice,
+:root[data-theme="cyber-grid"] .rank-badge,
+:root[data-theme="cyber-grid"] .diamond-wallet-cost,
+:root[data-theme="cyber-grid"] .sabotage-card em,
+:root[data-theme="cyber-grid"] .progress-rail,
+:root[data-theme="cyber-grid"] .energy-rail,
+:root[data-theme="diamond-black"] .pass-section-heading span,
+:root[data-theme="diamond-black"] .pass-track-card-head em,
+:root[data-theme="diamond-black"] .pass-premium-pill,
+:root[data-theme="diamond-black"] .pass-next-pill,
+:root[data-theme="diamond-black"] .pass-claim-notice,
+:root[data-theme="diamond-black"] .rank-badge,
+:root[data-theme="diamond-black"] .diamond-wallet-cost,
+:root[data-theme="diamond-black"] .sabotage-card em,
+:root[data-theme="diamond-black"] .progress-rail,
+:root[data-theme="diamond-black"] .energy-rail {
+  background: var(--theme-surface-soft);
+}
+
+:root[data-theme="cyber-grid"] .pass-premium-pill,
+:root[data-theme="cyber-grid"] .pass-next-pill,
+:root[data-theme="cyber-grid"] .pass-claim-notice,
+:root[data-theme="cyber-grid"] .rank-badge,
+:root[data-theme="cyber-grid"] .diamond-wallet-cost,
+:root[data-theme="diamond-black"] .pass-premium-pill,
+:root[data-theme="diamond-black"] .pass-next-pill,
+:root[data-theme="diamond-black"] .pass-claim-notice,
+:root[data-theme="diamond-black"] .rank-badge,
+:root[data-theme="diamond-black"] .diamond-wallet-cost {
+  color: var(--theme-accent);
 }
 
 @keyframes cyberGridDrift {

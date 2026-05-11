@@ -30,19 +30,19 @@ const DIFFICULTY_COMPLETION_XP: Record<Difficulty, number> = {
 };
 
 export const RANK_TIERS: Array<{ id: RankedTier; label: string; minXp: number }> = [
-  { id: "bronze-i", label: "Bronze I", minXp: 0 },
-  { id: "bronze-ii", label: "Bronze II", minXp: 300 },
-  { id: "silver-i", label: "Silver I", minXp: 900 },
-  { id: "silver-ii", label: "Silver II", minXp: 1400 },
-  { id: "gold-i", label: "Gold I", minXp: 2000 },
-  { id: "gold-ii", label: "Gold II", minXp: 3200 }
+  { id: "bronze-i", label: "Бронза I", minXp: 0 },
+  { id: "bronze-ii", label: "Бронза II", minXp: 300 },
+  { id: "silver-i", label: "Серебро I", minXp: 900 },
+  { id: "silver-ii", label: "Серебро II", minXp: 1400 },
+  { id: "gold-i", label: "Золото I", minXp: 2000 },
+  { id: "gold-ii", label: "Золото II", minXp: 3200 }
 ];
 
 export const ACHIEVEMENTS: Achievement[] = [
   { id: "first-clear", title: "Первое решение", description: "Завершить первое судоку." },
   { id: "clean-grid", title: "Чистая сетка", description: "Решить без ошибок." },
   { id: "streak-3", title: "Искра серии", description: "Поддержать серию 3 дня." },
-  { id: "arena-ready", title: "Готов к PvP", description: "Победить в PvP-матче." }
+  { id: "arena-ready", title: "Готов к арене", description: "Победить в матче арены." }
 ];
 
 export function levelForXp(xp: number): number {
@@ -62,7 +62,7 @@ export function rankForXp(xp: number): RankedTier {
 }
 
 export function rankLabel(rank: RankedTier): string {
-  return RANK_TIERS.find((tier) => tier.id === rank)?.label ?? "Bronze I";
+  return RANK_TIERS.find((tier) => tier.id === rank)?.label ?? "Бронза I";
 }
 
 export function nextRankTier(xp: number): (typeof RANK_TIERS)[number] | null {

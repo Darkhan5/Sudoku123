@@ -38,6 +38,130 @@ export interface CellPosition {
   col: number;
 }
 
+export type GameReviewMode = "daily" | "free" | "pvp" | "arena";
+export type GameActionType = "place" | "erase" | "hint" | "check";
+export type SudokuTechnique =
+  | "naked-single"
+  | "hidden-single"
+  | "naked-pair"
+  | "hidden-pair"
+  | "pointing-pair"
+  | "x-wing"
+  | "swordfish"
+  | "unknown";
+export type MoveQuality = "optimal" | "good" | "missed" | "mistake" | "assisted" | "neutral";
+
+export interface GameMoveLog {
+  moveNumber: number;
+  action: GameActionType;
+  row: number;
+  col: number;
+  digit: number;
+  correct: boolean;
+  timestamp: number;
+  msSincePrevious: number;
+  boardBefore: number[][];
+  boardAfter: number[][];
+}
+
+export interface GamePause {
+  moveNumber: number;
+  row: number;
+  col: number;
+  durationMs: number;
+  startedAt: number;
+  endedAt: number;
+}
+
+export interface TechniqueMove {
+  row: number;
+  col: number;
+  digit: number;
+  technique: SudokuTechnique;
+  difficulty: number;
+  reason: string;
+}
+
+export interface GameSessionStats {
+  totalTimeMs: number;
+  hintsUsed: number;
+  checksUsed: number;
+  erasures: number;
+}
+
+export interface GameSession {
+  id: string;
+  mode: GameReviewMode;
+  difficulty: Difficulty;
+  puzzle: number[][];
+  solution: number[][];
+  given: boolean[][];
+  startedAt: number;
+  completedAt?: number;
+  lastActionAt: number;
+  moves: GameMoveLog[];
+  pauses: GamePause[];
+  stats: GameSessionStats;
+}
+
+export interface MoveAnalysis {
+  move: GameMoveLog;
+  technique: SudokuTechnique;
+  quality: MoveQuality;
+  suggestedMove: TechniqueMove | null;
+  complexity: number;
+  explanation: string;
+}
+
+export interface AreaPerformance {
+  index: number;
+  moves: number;
+  errors: number;
+  avgMs: number;
+}
+
+export interface HeatmapCell {
+  row: number;
+  col: number;
+  moves: number;
+  errors: number;
+  pauses: number;
+  avgMs: number;
+  intensity: number;
+}
+
+export interface WeaknessProfile {
+  byBlock: AreaPerformance[];
+  byRow: AreaPerformance[];
+  byCol: AreaPerformance[];
+  byDigit: AreaPerformance[];
+  heatmap: HeatmapCell[][];
+  accuracy: number;
+  averageMoveMs: number;
+  independence: number;
+}
+
+export interface KeyMoment {
+  id: string;
+  moveNumber: number;
+  row: number;
+  col: number;
+  title: string;
+  description: string;
+  technique: SudokuTechnique;
+  suggestedMove: TechniqueMove | null;
+  severity: "info" | "warning" | "error";
+}
+
+export interface GameReport {
+  session: GameSession;
+  score: number;
+  moveAnalyses: MoveAnalysis[];
+  keyMoments: KeyMoment[];
+  weaknessProfile: WeaknessProfile;
+  recommendations: string[];
+}
+
 export interface Player {
   id: string;
   name: string;
@@ -77,6 +201,7 @@ export interface DailyState {
   time: number;
   mistakes: number;
   hintsUsed: number;
+  checksUsed?: number;
   score: number;
   board?: number[][];
   solution?: number[][];
@@ -84,6 +209,7 @@ export interface DailyState {
   notes?: number[][][];
   notesUsed?: number;
   difficulty?: Difficulty;
+  reviewSession?: GameSession;
 }
 
 export interface GameState {

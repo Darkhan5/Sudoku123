@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { DiamondGlyph } from "@/components/ui/DiamondGlyph";
 import { DiamondModal } from "@/components/ui/DiamondModal";
 import { SUDOKU_PASS_XP_PER_LEVEL, daysUntilSeasonEnds, type PassReward } from "@/lib/domain/sudokuPass";
@@ -19,6 +19,8 @@ export default function SudokuPassPage() {
   const [view, setView] = useState<SudokuPassView | null>(null);
   const [diamondOpen, setDiamondOpen] = useState(false);
   const [claimNotice, setClaimNotice] = useState("");
+  const [highlightRewardId, setHighlightRewardId] = useState<string | null>(null);
+  const targetRewardHandled = useRef(false);
 
   function refresh() {
     setView(getSudokuPassView());
@@ -36,6 +38,32 @@ export default function SudokuPassPage() {
 
   const levels = useMemo(() => rewardLevels(), []);
   const tasks = useMemo(() => taskDefinitions(), []);
+
+  useEffect(() => {
+    if (!view || targetRewardHandled.current) return;
+
+    const targetTheme = new URLSearchParams(window.location.search).get("theme");
+    if (!targetTheme) return;
+
+    const reward = levels
+      .flatMap((level) => [...level.free, ...level.premium])
+      .find((item) => item.kind === "theme" && item.theme === targetTheme);
+
+    if (!reward) return;
+
+    targetRewardHandled.current = true;
+    setHighlightRewardId(reward.id);
+    setClaimNotice(`Тема находится в премиум-треке на ${reward.level} уровне.`);
+
+    const timer = window.setTimeout(() => {
+      document.getElementById(`pass-reward-${reward.id}`)?.scrollIntoView({
+        behavior: "smooth",
+        block: "center"
+      });
+    }, 80);
+
+    return () => window.clearTimeout(timer);
+  }, [levels, view]);
 
   if (!view) {
     return <main className="page-shell">Загружаем Судоку Пасс...</main>;
@@ -87,14 +115,14 @@ export default function SudokuPassPage() {
         <aside className="pass-xp-card" aria-label="Прогресс уровня">
           <span>{premium ? "Премиум активен" : "Бесплатный трек"}</span>
           <strong>{view.progress.level} уровень</strong>
-          <p>{view.progress.xp.toLocaleString("ru-RU")} XP</p>
+          <p>{view.progress.xp.toLocaleString("ru-RU")} опыта</p>
           <div className="progress-rail">
             <span style={{ width: `${levelPercent}%` }} />
           </div>
           <small>
             {view.progress.nextLevelXp === null
               ? "Пасс полностью пройден"
-              : `До следующего уровня: ${view.progress.xpToNextLevel.toLocaleString("ru-RU")} XP`}
+              : `До следующего уровня: ${view.progress.xpToNextLevel.toLocaleString("ru-RU")} опыта`}
           </small>
         </aside>
       </section>
@@ -129,7 +157,7 @@ export default function SudokuPassPage() {
             <article key={level.level} className={`pass-level-row ${unlocked ? "pass-level-row-unlocked" : ""}`}>
               <div className="pass-level-marker">
                 <span>{level.level}</span>
-                <small>{level.xpRequired.toLocaleString("ru-RU")} XP</small>
+                <small>{level.xpRequired.toLocaleString("ru-RU")} опыта</small>
               </div>
               <div className="pass-level-rewards">
                 <PassTrackRewards
@@ -139,6 +167,7 @@ export default function SudokuPassPage() {
                   levelUnlocked={unlocked}
                   premiumActive={premium}
                   claimedIds={claimedIds}
+                  highlightRewardId={highlightRewardId}
                   onClaim={claimReward}
                 />
                 <PassTrackRewards
@@ -148,6 +177,7 @@ export default function SudokuPassPage() {
                   levelUnlocked={unlocked}
                   premiumActive={premium}
                   claimedIds={claimedIds}
+                  highlightRewardId={highlightRewardId}
                   onClaim={claimReward}
                 />
               </div>
@@ -159,7 +189,7 @@ export default function SudokuPassPage() {
       <section className="pass-section-heading">
         <div>
           <p>Задания</p>
-          <h2>XP для пасса</h2>
+          <h2>Опыт для пасса</h2>
         </div>
       </section>
 
@@ -173,7 +203,7 @@ export default function SudokuPassPage() {
             <article key={task.id} className={`pass-task ${complete ? "pass-task-complete" : ""}`}>
               <div className="pass-task-topline">
                 <span>{task.cadence === "daily" ? "Ежедневно" : "За сезон"}</span>
-                <em>+{task.xp} XP</em>
+                <em>+{task.xp} опыта</em>
               </div>
               <strong>{task.title}</strong>
               <p>{task.description}</p>
@@ -208,6 +238,7 @@ function PassTrackRewards({
   levelUnlocked,
   premiumActive,
   claimedIds,
+  highlightRewardId,
   onClaim
 }: {
   track: Track;
@@ -216,6 +247,7 @@ function PassTrackRewards({
   levelUnlocked: boolean;
   premiumActive: boolean;
   claimedIds: Set<string>;
+  highlightRewardId: string | null;
   onClaim: (rewardId: string) => void;
 }) {
   const trackLocked = track === "premium" && !premiumActive;
@@ -240,7 +272,11 @@ function PassTrackRewards({
             const claimed = claimedIds.has(reward.id);
             const claimable = levelUnlocked && !trackLocked && !claimed;
             return (
-              <div key={reward.id} className={`pass-reward-item ${claimed ? "pass-reward-item-claimed" : ""}`}>
+              <div
+                key={reward.id}
+                id={`pass-reward-${reward.id}`}
+                className={`pass-reward-item ${claimed ? "pass-reward-item-claimed" : ""} ${highlightRewardId === reward.id ? "pass-reward-item-highlight" : ""}`}
+              >
                 <span className={`pass-reward-icon pass-reward-icon-${reward.kind}`} aria-hidden>
                   {rewardIcon(reward)}
                 </span>
@@ -305,9 +341,9 @@ function rewardIcon(reward: PassReward): ReactNode {
   if (reward.kind === "theme") return "Тема";
   if (reward.kind === "number_style") return "123";
   if (reward.kind === "title") return "Титул";
-  if (reward.kind === "pvp_effect") return "PvP";
+  if (reward.kind === "pvp_effect") return "Арена";
   if (reward.kind === "kazakh_ornament") return "Өрнек";
-  if (reward.kind === "xp_boost") return "XP";
+  if (reward.kind === "xp_boost") return "Опыт";
   if (reward.kind === "board_style") return "Поле";
   if (reward.kind === "animated_cosmetic") return "FX";
   return "*";

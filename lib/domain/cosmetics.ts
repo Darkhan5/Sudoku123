@@ -5,7 +5,7 @@ export interface NumberPack {
   name: string;
   description: string;
   requiredDiamonds: number;
-  rarity: "Common" | "Epic" | "Legendary";
+  rarity: "Обычный" | "Эпический" | "Легендарный";
 }
 
 export interface CosmeticOption<T extends string> {
@@ -21,28 +21,28 @@ export const NUMBER_PACKS: NumberPack[] = [
     name: "Классический пак",
     description: "Чистые соревновательные цифры для обычной игры.",
     requiredDiamonds: 5,
-    rarity: "Common"
+    rarity: "Обычный"
   },
   {
     id: "neon",
     name: "Неоновый пак",
-    description: "Светящиеся цифры для напряжённых PvP-матчей.",
+    description: "Светящиеся цифры для напряжённых матчей арены.",
     requiredDiamonds: 10,
-    rarity: "Epic"
+    rarity: "Эпический"
   },
   {
     id: "pixel",
     name: "Пиксельный пак",
     description: "Аркадные цифры с чётким квадратным ритмом.",
     requiredDiamonds: 15,
-    rarity: "Epic"
+    rarity: "Эпический"
   },
   {
     id: "handwritten",
     name: "Рукописный пак",
     description: "Мягкий стиль для спокойного решения.",
     requiredDiamonds: 25,
-    rarity: "Legendary"
+    rarity: "Легендарный"
   }
 ];
 

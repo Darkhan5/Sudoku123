@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import type { CellPosition, Player, Settings, SudokuPuzzle } from "@/types";
+import type { CellPosition, GameReport, GameSession, Player, Settings, SudokuPuzzle } from "@/types";
 import {
   SABOTAGE_ABILITIES,
   calculateBoardProgress,
@@ -13,6 +13,7 @@ import {
   type RoomState,
   type SabotageId
 } from "@/lib/domain/arena";
+import { analyzeGameSession, completeGameSession, createGameSession, recordGameAction } from "@/lib/domain/gameReview";
 import { rankLabel, rankForXp } from "@/lib/domain/progression";
 import { generateWithSeed } from "@/lib/sudoku/generator";
 import { getConflicts, isBoardComplete } from "@/lib/sudoku/validator";
@@ -22,6 +23,7 @@ import { recordPassPuzzleSolved } from "@/lib/storage/sudokuPass";
 import { playFeedback } from "@/lib/utils/feedback";
 import { Board } from "@/components/sudoku/Board";
 import { Controls } from "@/components/sudoku/Controls";
+import { GameReviewDetails, GameReviewSummary } from "@/components/sudoku/GameReview";
 import { Timer } from "@/components/sudoku/Timer";
 
 type MatchState = "lobby" | "waiting" | "ready" | "countdown" | "playing" | "finished";
@@ -120,7 +122,7 @@ async function readRoomFromServer(code: string): Promise<RoomState | null> {
   const response = await fetch(`/api/pvp/rooms/${encodeURIComponent(code)}`, { cache: "no-store" });
   if (response.status === 404) return null;
   const payload = (await response.json().catch(() => ({}))) as { room?: RoomState | null; error?: string };
-  if (!response.ok) throw new Error(payload.error ?? "PvP room request failed.");
+  if (!response.ok) throw new Error(payload.error ?? "Не удалось выполнить запрос комнаты арены.");
   return payload.room ?? null;
 }
 
@@ -143,7 +145,7 @@ async function writeRoomToServer(room: RoomState): Promise<RoomState | null> {
     body: JSON.stringify(room)
   });
   const payload = (await response.json().catch(() => ({}))) as { room?: RoomState | null; error?: string };
-  if (!response.ok) throw new Error(payload.error ?? "PvP room sync failed.");
+  if (!response.ok) throw new Error(payload.error ?? "Не удалось синхронизировать комнату арены.");
   return payload.room ?? null;
 }
 
@@ -215,6 +217,9 @@ export function ArenaShell() {
   const [room, setRoom] = useState<RoomState | null>(() => (routeCode ? readRoom(routeCode) : null));
   const [lastIncomingEffect, setLastIncomingEffect] = useState("");
   const [player, setPlayer] = useState<Player>(() => getPlayer() ?? initPlayer());
+  const [gameSession, setGameSession] = useState<GameSession | null>(null);
+  const [gameReport, setGameReport] = useState<GameReport | null>(null);
+  const [reviewExpanded, setReviewExpanded] = useState(false);
 
   const siteOrigin = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? (typeof window === "undefined" ? "" : window.location.origin);
   const inviteLink = `${siteOrigin || "https://sudoku.app"}/pvp/${code}`;
@@ -268,6 +273,9 @@ export function ArenaShell() {
     setRewardGranted(false);
     setRewardXp(0);
     setLastIncomingEffect("");
+    setGameSession(null);
+    setGameReport(null);
+    setReviewExpanded(false);
   }, []);
 
   const syncRoom = useCallback(() => {
@@ -278,7 +286,7 @@ export function ArenaShell() {
       const cached = cacheRoom(serverRoom);
       setRoom((current) => (isNewerRoom(cached, current) ? cached : current));
     }).catch((error) => {
-      setStatus(error instanceof Error ? error.message : "PvP временно недоступен.");
+      setStatus(error instanceof Error ? error.message : "Арена временно недоступна.");
     });
   }, [code]);
 
@@ -319,7 +327,7 @@ export function ArenaShell() {
           setRole("guest");
           setRoom(null);
           setMatchState("waiting");
-          setStatus("Комната не найдена. Попроси друга создать PvP заново и отправить новую ссылку.");
+          setStatus("Комната не найдена. Попроси друга создать арену заново и отправить новую ссылку.");
           return;
         }
 
@@ -356,7 +364,7 @@ export function ArenaShell() {
         );
       } catch (error) {
         if (cancelled) return;
-        setStatus(error instanceof Error ? error.message : "Не удалось открыть PvP-комнату.");
+        setStatus(error instanceof Error ? error.message : "Не удалось открыть комнату арены.");
       }
     }
 
@@ -416,6 +424,19 @@ export function ArenaShell() {
     const timer = window.setInterval(syncCountdown, 200);
     return () => window.clearInterval(timer);
   }, [matchState, room?.startedAt]);
+
+  useEffect(() => {
+    if (matchState !== "playing" || gameSession) return;
+    setGameSession(
+      createGameSession({
+        mode: "pvp",
+        difficulty: puzzle.difficulty,
+        puzzle: puzzle.puzzle,
+        solution: puzzle.solution,
+        given: puzzle.given
+      })
+    );
+  }, [gameSession, matchState, puzzle.difficulty, puzzle.given, puzzle.puzzle, puzzle.solution]);
 
   useEffect(() => {
     if (matchState !== "playing") return;
@@ -483,19 +504,37 @@ export function ArenaShell() {
 
   useEffect(() => {
     if (matchState !== "playing" || !room) return;
+    const finishReview = () => {
+      const activeSession =
+        gameSession ??
+        createGameSession({
+          mode: "pvp",
+          difficulty: puzzle.difficulty,
+          puzzle: puzzle.puzzle,
+          solution: puzzle.solution,
+          given: puzzle.given
+        });
+      const completedSession = completeGameSession(activeSession, elapsed * 1000);
+      setGameSession(completedSession);
+      setGameReport(analyzeGameSession(completedSession));
+      setReviewExpanded(false);
+    };
+
     if (isBoardComplete(board, puzzle.solution)) {
       const nextRoom = role === "host" ? { ...room, hostFinished: true, hostProgress: 100 } : { ...room, guestFinished: true, guestProgress: 100 };
       setRoom(writeRoom(nextRoom));
+      finishReview();
       setWinner("player");
       setMatchState("finished");
       return;
     }
     if (friendFinished) {
+      finishReview();
       setWinner("friend");
       setMatchState("finished");
       playFeedback(settings, "error");
     }
-  }, [board, friendFinished, matchState, puzzle.solution, role, room, settings]);
+  }, [board, elapsed, friendFinished, gameSession, matchState, puzzle.difficulty, puzzle.given, puzzle.puzzle, puzzle.solution, role, room, settings]);
 
   useEffect(() => {
     if (matchState !== "finished" || !winner || rewardGranted) return;
@@ -529,7 +568,7 @@ export function ArenaShell() {
       setMatchState("waiting");
       setStatus("Комната создана. Скопируй ссылку и отправь её другу.");
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Не удалось создать PvP-комнату.");
+      setStatus(error instanceof Error ? error.message : "Не удалось создать комнату арены.");
     }
   }
 
@@ -591,6 +630,28 @@ export function ArenaShell() {
 
     next[selected.row][selected.col] = value;
     const correct = value === puzzle.solution[selected.row][selected.col];
+    const timestamp = Date.now();
+    const nextSession = recordGameAction(
+      gameSession ??
+        createGameSession({
+          mode: "pvp",
+          difficulty: puzzle.difficulty,
+          puzzle: puzzle.puzzle,
+          solution: puzzle.solution,
+          given: puzzle.given,
+          startedAt: timestamp
+        }),
+      {
+        action: "place",
+        row: selected.row,
+        col: selected.col,
+        digit: value,
+        correct,
+        boardBefore: board,
+        boardAfter: next,
+        timestamp
+      }
+    );
     const comboKey = keyOf(selected);
     let nextCombo = combo;
 
@@ -610,13 +671,41 @@ export function ArenaShell() {
     }
 
     setBoard(next);
+    setGameSession(nextSession);
     playFeedback(settings, correct ? (nextCombo >= 3 ? "combo" : "success") : "error");
   }
 
   function eraseSelected() {
     if (!selected || puzzle.given[selected.row][selected.col] || matchState !== "playing") return;
     const next = cloneBoard(board);
+    const previous = next[selected.row][selected.col];
     next[selected.row][selected.col] = 0;
+    if (previous !== 0) {
+      const timestamp = Date.now();
+      setGameSession(
+        recordGameAction(
+          gameSession ??
+            createGameSession({
+              mode: "pvp",
+              difficulty: puzzle.difficulty,
+              puzzle: puzzle.puzzle,
+              solution: puzzle.solution,
+              given: puzzle.given,
+              startedAt: timestamp
+            }),
+          {
+            action: "erase",
+            row: selected.row,
+            col: selected.col,
+            digit: 0,
+            correct: true,
+            boardBefore: board,
+            boardAfter: next,
+            timestamp
+          }
+        )
+      );
+    }
     setBoard(next);
     playFeedback(settings, "tap");
   }
@@ -692,7 +781,7 @@ export function ArenaShell() {
 
       <section className="arena-hero">
         <div>
-          <p className="text-sm font-black uppercase tracking-wide text-cyan-300">PvP-саботаж</p>
+          <p className="text-sm font-black uppercase tracking-wide text-cyan-300">Арена с саботажем</p>
           <h1 className="mt-1 text-3xl font-black text-white md:text-5xl">Матч с другом на одной доске</h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
             Создай приватную комнату, отправь ссылку другу, дождись подключения и стартуй только после готовности обоих игроков.
@@ -712,7 +801,7 @@ export function ArenaShell() {
             <small>После создания появится уникальная ссылка. Никто не подключится автоматически.</small>
           </div>
           <button type="button" className="btn-primary" onClick={createLobby}>
-            Создать PvP
+            Создать арену
           </button>
         </section>
       ) : (
@@ -816,14 +905,14 @@ export function ArenaShell() {
               onUndo={() => undefined}
               onToggleNotes={() => setNotesMode((current) => !current)}
               onErase={eraseSelected}
-              onHint={() => setStatus("В PvP подсказки не дают ответ: проверяй строку, столбец и квадрат.")}
+              onHint={() => setStatus("На арене подсказки не дают ответ: проверяй строку, столбец и квадрат.")}
               onToggleOrnament={() => undefined}
               onOpenOrnamentLegend={() => undefined}
             />
 
             <section className="arena-energy-panel">
               <div className="arena-status-stack">
-                <strong>{combo > 1 ? `Матч: комбо x${combo}` : "Матч: чистая гонка"}</strong>
+                <strong>{combo > 1 ? `Матч: комбо ×${combo}` : "Матч: чистая гонка"}</strong>
               </div>
               <p>{status}</p>
             </section>
@@ -863,7 +952,7 @@ export function ArenaShell() {
           <div>
             <p className="text-xs font-bold uppercase text-primary">Итог матча</p>
             <h2 className="text-2xl font-black text-slate-950">{winner === "player" ? "Победитель: ты" : "Победитель: друг"}</h2>
-            <p className="mt-2 text-sm font-semibold text-slate-600">+{rewardXp} XP</p>
+            <p className="mt-2 text-sm font-semibold text-slate-600">+{rewardXp} опыта</p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
             <button type="button" className="btn-primary" onClick={rematch}>
@@ -876,10 +965,31 @@ export function ArenaShell() {
         </section>
       ) : null}
 
+      {matchState === "finished" && gameReport ? (
+        <section className="info-panel">
+          {reviewExpanded ? (
+            <div className="grid gap-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-black uppercase text-primary">PvP Game Review</p>
+                  <h2 className="text-xl font-black text-slate-950">Подробный разбор матча</h2>
+                </div>
+                <button type="button" className="btn-secondary" onClick={() => setReviewExpanded(false)}>
+                  К итогам
+                </button>
+              </div>
+              <GameReviewDetails report={gameReport} />
+            </div>
+          ) : (
+            <GameReviewSummary report={gameReport} onOpenDetails={() => setReviewExpanded(true)} />
+          )}
+        </section>
+      ) : null}
+
       {tutorialOpen ? (
         <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/70 px-4 backdrop-blur-sm">
           <section className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-2xl">
-            <p className="text-xs font-bold uppercase text-primary">Первый вход в PvP</p>
+            <p className="text-xs font-bold uppercase text-primary">Первый вход на арену</p>
             <h2 className="mt-1 text-2xl font-black text-slate-950">Только приглашение друга</h2>
             <div className="mt-4 grid gap-2">
               <div className="diamond-wallet-row"><strong>✓ Приватная комната создаётся по коду</strong></div>

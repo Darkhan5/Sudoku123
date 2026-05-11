@@ -16,7 +16,7 @@ interface SupabaseRoomRecord {
 const DATA_DIR = path.join(process.cwd(), ".data");
 const DATA_FILE = path.join(DATA_DIR, "pvp-rooms.json");
 export const PVP_PERSISTENCE_ERROR =
-  "PvP на Vercel требует Supabase. Добавь SUPABASE_URL и SUPABASE_SERVICE_ROLE_KEY в Vercel Environment Variables.";
+  "Арена на Vercel требует Supabase. Добавь SUPABASE_URL и SUPABASE_SERVICE_ROLE_KEY в переменные окружения Vercel.";
 
 function normalizeCode(code: string): string {
   return code.trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
@@ -86,7 +86,7 @@ export function createSupabasePvpRoomStore(params: {
         headers,
         cache: "no-store"
       });
-      if (!response.ok) throw new Error("Could not read PvP room.");
+      if (!response.ok) throw new Error("Не удалось прочитать комнату арены.");
       const records = (await response.json()) as SupabaseRoomRecord[];
       return records[0]?.room ?? null;
     },
@@ -105,7 +105,7 @@ export function createSupabasePvpRoomStore(params: {
           updated_at: new Date(next.updatedAt).toISOString()
         })
       });
-      if (!response.ok) throw new Error("Could not write PvP room.");
+      if (!response.ok) throw new Error("Не удалось сохранить комнату арены.");
       return next;
     }
   };

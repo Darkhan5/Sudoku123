@@ -1,11 +1,13 @@
 "use client";
 
 import { KeyboardEvent, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { AccessibilitySettings, ErrorCellPattern, ErrorCellTexture, NumberStyle, Player, Settings, ThemeName } from "@/types";
 import { PlayerCard } from "@/components/profile/PlayerCard";
 import { DiamondModal } from "@/components/ui/DiamondModal";
 import { DiamondGlyph } from "@/components/ui/DiamondGlyph";
 import { NUMBER_PACKS, isNumberPackUnlocked } from "@/lib/domain/cosmetics";
+import { getThemeReward } from "@/lib/domain/sudokuPass";
 import { canUseTheme, getThemeCatalog } from "@/lib/domain/subscription";
 import { KAZAKHSTAN_CITIES } from "@/lib/domain/onboarding";
 import { spendDiamonds } from "@/lib/storage/economy";
@@ -26,6 +28,10 @@ const ERROR_PATTERNS: Array<{ value: ErrorCellPattern; label: string }> = [
   { value: "corner", label: "Уголки" },
   { value: "ring", label: "Кольцо" }
 ];
+
+function passThemePath(theme: ThemeName): string {
+  return `/pass?theme=${encodeURIComponent(theme)}`;
+}
 
 function accessibilitySettings(settings: Settings): AccessibilitySettings {
   return (
@@ -67,6 +73,7 @@ interface AccessibilityPatch {
 }
 
 export default function ProfilePage() {
+  const router = useRouter();
   const [player, setPlayer] = useState<Player | null>(null);
   const [settings, setSettingsState] = useState<Settings | null>(null);
   const [editingName, setEditingName] = useState(false);
@@ -113,6 +120,11 @@ export default function ProfilePage() {
   function chooseTheme(nextTheme: ThemeName) {
     if (!player) return;
     if (!canUseTheme(player.plan, nextTheme) || !canUseExperiencePack(nextTheme)) {
+      const passReward = getThemeReward(nextTheme);
+      if (passReward) {
+        router.push(passThemePath(nextTheme));
+        return;
+      }
       setDiamondOpen(true);
       return;
     }
@@ -303,16 +315,17 @@ export default function ProfilePage() {
         <div className="mt-4 grid gap-2 sm:grid-cols-3">
           {DIAMOND_THEMES.map((item) => {
             const locked = !canUseTheme(player.plan, item.id) || !canUseExperiencePack(item.id);
+            const passReward = getThemeReward(item.id);
             return (
               <button
                 key={item.id}
                 type="button"
                 className={`theme-option ${theme === item.id ? "theme-option-active" : ""}`}
                 onClick={() => chooseTheme(item.id)}
-                title={locked ? "Доступно с премиум-подпиской" : item.description}
+                title={locked && passReward ? `Награда Судоку Пасса: ${passReward.level} уровень премиум-трека` : locked ? "Доступно с премиум-подпиской" : item.description}
               >
                 <span className="block">{item.name}</span>
-                <span className="block text-[11px] font-semibold text-slate-400">{locked ? "Закрыто" : "Открыто"}</span>
+                <span className="block text-[11px] font-semibold text-slate-400">{locked && passReward ? `${passReward.level} уровень в Пассе` : locked ? "Закрыто" : "Открыто"}</span>
               </button>
             );
           })}

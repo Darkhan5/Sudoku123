@@ -44,7 +44,7 @@ function appUrl(request: Request): string {
 }
 
 function stripeErrorMessage(payload: StripeCheckoutSession | StripePriceList): string {
-  return payload.error?.message ?? "Stripe Checkout request failed";
+  return payload.error?.message ?? "Запрос оплаты Stripe не удался";
 }
 
 function asMetadataValue(value: unknown): string {
@@ -55,7 +55,7 @@ async function resolvePriceId(secretKey: string, configuredId: string, recurring
   if (configuredId.startsWith("price_")) return configuredId;
 
   if (!configuredId.startsWith("prod_")) {
-    throw new Error("Stripe ID must start with price_ or prod_.");
+    throw new Error("Идентификатор Stripe должен начинаться с price_ или prod_.");
   }
 
   const params = new URLSearchParams({
@@ -79,7 +79,7 @@ async function resolvePriceId(secretKey: string, configuredId: string, recurring
   const matchingPrices = prices.filter((item) => (recurring ? Boolean(item.recurring) : !item.recurring));
   const price = matchingPrices.find((item) => item.currency?.toLowerCase() === STRIPE_CURRENCY);
   if (!price) {
-    throw new Error(`No active ${STRIPE_CURRENCY.toUpperCase()} ${recurring ? "recurring" : "one-time"} Stripe price found for this product.`);
+    throw new Error(`Для этого продукта не найдена активная ${recurring ? "регулярная" : "разовая"} цена Stripe в валюте ${STRIPE_CURRENCY.toUpperCase()}.`);
   }
 
   return price.id;
@@ -95,14 +95,14 @@ export async function POST(request: Request) {
   const secretKey = process.env.STRIPE_SECRET_KEY;
 
   if (!secretKey) {
-    return NextResponse.json({ error: "Stripe is not configured. Add STRIPE_SECRET_KEY to .env.local locally or Vercel Environment Variables in production." }, { status: 503 });
+    return NextResponse.json({ error: "Stripe не настроен. Добавь STRIPE_SECRET_KEY в .env.local локально или в переменные окружения Vercel." }, { status: 503 });
   }
 
   const checkoutRequest = await readCheckoutRequest(request);
   const checkoutType = checkoutRequest.type ?? "subscription";
 
   if (checkoutType !== "sudoku_pass" && checkoutType !== "subscription" && checkoutType !== "diamond_pack") {
-    return NextResponse.json({ error: "Unsupported checkout type." }, { status: 400 });
+    return NextResponse.json({ error: "Неподдерживаемый тип оплаты." }, { status: 400 });
   }
 
   let checkoutPriceId: string;
@@ -115,14 +115,14 @@ export async function POST(request: Request) {
     if (checkoutType === "diamond_pack") {
       const pack = getDiamondStorePack(checkoutRequest.packId);
       if (!pack) {
-        return NextResponse.json({ error: "Unknown Diamond Store pack." }, { status: 400 });
+        return NextResponse.json({ error: "Неизвестный набор алмазов." }, { status: 400 });
       }
 
       const envName = PACK_PRICE_ENV[pack.id];
       const configuredPriceId = process.env[envName];
 
       if (!configuredPriceId) {
-        return NextResponse.json({ error: `Stripe pack is not configured. Add ${envName} to .env.local locally or Vercel Environment Variables in production.` }, { status: 503 });
+        return NextResponse.json({ error: `Набор алмазов не настроен в Stripe. Добавь ${envName} в .env.local локально или в переменные окружения Vercel.` }, { status: 503 });
       }
 
       checkoutPriceId = await resolvePriceId(secretKey, configuredPriceId, false);
@@ -137,7 +137,7 @@ export async function POST(request: Request) {
       if (!configuredPriceId) {
         return NextResponse.json(
           {
-            error: "Stripe Sudoku Pass is not configured. Add STRIPE_SUDOKU_PASS_PRICE_ID to .env.local locally or Vercel Environment Variables in production."
+            error: "Судоку Пасс не настроен в Stripe. Добавь STRIPE_SUDOKU_PASS_PRICE_ID в .env.local локально или в переменные окружения Vercel."
           },
           { status: 503 }
         );
@@ -151,7 +151,7 @@ export async function POST(request: Request) {
       metadata.seasonEndsAt = season.endsAt;
     }
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Stripe price lookup failed" }, { status: 400 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Не удалось найти цену Stripe" }, { status: 400 });
   }
 
   const origin = appUrl(request);

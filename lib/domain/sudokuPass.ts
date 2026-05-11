@@ -111,7 +111,7 @@ export const PASS_TASKS: PassTaskDefinition[] = [
     id: "season-win-10-pvp",
     cadence: "seasonal",
     title: "10 побед на арене",
-    description: "Побеждай соперников в PvP.",
+    description: "Побеждай соперников на арене.",
     goal: 10,
     xp: 240
   },
@@ -149,7 +149,7 @@ function freeReward(level: number): PassReward[] {
     return [{ id: rewardId("free", level, "pixel"), level, track: "free", kind: "number_style", title: "Пиксельные цифры", numberStyle: "pixel" }];
   }
   if ([8, 18, 26].includes(level)) {
-    return [{ id: rewardId("free", level, "xp-boost"), level, track: "free", kind: "xp_boost", title: "Буст XP на 2 часа", boostHours: 2 }];
+    return [{ id: rewardId("free", level, "xp-boost"), level, track: "free", kind: "xp_boost", title: "Буст опыта на 2 часа", boostHours: 2 }];
   }
   if (level % 3 === 0 || level === 1) {
     return [
@@ -174,7 +174,7 @@ function premiumReward(level: number): PassReward[] {
   if (level === 7) rewards.push({ id: rewardId("premium", level, "library-ink"), level, track: "premium", kind: "theme", title: "Тема «Библиотечные чернила»", theme: "library-ink" });
   if (level === 10) rewards.push({ id: rewardId("premium", level, "title-grid-nomad"), level, track: "premium", kind: "title", title: "Титул: Кочевник сетки" });
   if (level === 14) rewards.push({ id: rewardId("premium", level, "tumar-line"), level, track: "premium", kind: "kazakh_ornament", title: "Орнамент «Тумар»" });
-  if (level === 18) rewards.push({ id: rewardId("premium", level, "signal-jam"), level, track: "premium", kind: "pvp_effect", title: "Эффект PvP «Сбой сигнала»" });
+  if (level === 18) rewards.push({ id: rewardId("premium", level, "signal-jam"), level, track: "premium", kind: "pvp_effect", title: "Эффект арены «Сбой сигнала»" });
   if (level === 24) rewards.push({ id: rewardId("premium", level, "handwritten"), level, track: "premium", kind: "number_style", title: "Рукописные цифры", numberStyle: "handwritten" });
   if (level === 30) rewards.push({ id: rewardId("premium", level, "season-solver"), level, track: "premium", kind: "title", title: "Титул: Герой сезона" });
   if (level % 4 === 0) {

@@ -58,14 +58,14 @@ function CheckoutSuccessContent() {
   const sessionId = searchParams.get("session_id");
   const [state, setState] = useState<CheckoutState>("checking");
   const [kind, setKind] = useState<SuccessKind>("unknown");
-  const [message, setMessage] = useState("Checking Stripe payment...");
+  const [message, setMessage] = useState("Проверяем оплату Stripe...");
   const [detail, setDetail] = useState("");
 
   useEffect(() => {
     if (!sessionId) {
       setState("error");
-      setMessage("Stripe did not return a session_id.");
-      setDetail("Return to the store and try opening checkout again.");
+      setMessage("Stripe не вернул идентификатор сессии.");
+      setDetail("Вернись в магазин и попробуй открыть оплату ещё раз.");
       return;
     }
 
@@ -78,14 +78,14 @@ function CheckoutSuccessContent() {
         const payload = (await response.json().catch(() => ({}))) as SessionStatusResponse;
 
         if (!response.ok) {
-          throw new Error(payload.error ?? "Could not verify the Stripe session.");
+          throw new Error(payload.error ?? "Не удалось проверить сессию Stripe.");
         }
 
         if (payload.status === "open") {
           if (!cancelled) {
             setState("open");
-            setMessage("Payment is still open.");
-            setDetail("If you already paid, wait a few seconds and refresh this page.");
+            setMessage("Оплата ещё открыта.");
+            setDetail("Если ты уже оплатил, подожди несколько секунд и обнови страницу.");
           }
           return;
         }
@@ -93,8 +93,8 @@ function CheckoutSuccessContent() {
         if (payload.status !== "complete") {
           if (!cancelled) {
             setState("error");
-            setMessage("Stripe session did not complete successfully.");
-            setDetail(payload.fulfillmentReason ?? "The purchase was not activated.");
+            setMessage("Сессия Stripe не завершилась успешно.");
+            setDetail(payload.fulfillmentReason ?? "Покупка не была активирована.");
           }
           return;
         }
@@ -114,7 +114,7 @@ function CheckoutSuccessContent() {
             setDetail(
               payload.fulfilled
                 ? "Покупка сохранена на сервере и синхронизирована с профилем."
-                : payload.fulfillmentReason ?? "Оплата прошла, серверное начисление ожидает webhook."
+                : payload.fulfillmentReason ?? "Оплата прошла, серверное начисление ожидает вебхук."
             );
           }
           return;
@@ -137,7 +137,7 @@ function CheckoutSuccessContent() {
             setDetail(
               payload.fulfilled
                 ? `Премиум-трек активен для сезона ${payload.seasonId ?? "сейчас"}.`
-                : payload.fulfillmentReason ?? "Оплата прошла, серверное начисление ожидает webhook."
+                : payload.fulfillmentReason ?? "Оплата прошла, серверное начисление ожидает вебхук."
             );
           }
           return;
@@ -146,13 +146,13 @@ function CheckoutSuccessContent() {
         if (!cancelled) {
           setState("error");
           setMessage("Оплата прошла, но продукт не распознан.");
-          setDetail(payload.fulfillmentReason ?? "Проверь metadata в Stripe Checkout.");
+          setDetail(payload.fulfillmentReason ?? "Проверь метаданные оплаты Stripe.");
         }
       } catch (error) {
         if (!cancelled) {
           setState("error");
           setMessage(error instanceof Error ? error.message : "Не удалось проверить Stripe-сессию.");
-          setDetail("Проверь dev-сервер и Stripe webhook.");
+          setDetail("Проверь локальный сервер и вебхук Stripe.");
         }
       }
     }
@@ -165,7 +165,7 @@ function CheckoutSuccessContent() {
   }, [sessionId]);
 
   const title = state === "checking" ? "Проверяем оплату" : state === "complete" ? "Покупка готова" : "Покупка не активирована";
-  const badge = state === "complete" ? (kind === "sudoku_pass" ? "Судоку Пасс" : "Алмазы") : "Stripe Checkout";
+  const badge = state === "complete" ? (kind === "sudoku_pass" ? "Судоку Пасс" : "Алмазы") : "Оплата Stripe";
 
   return (
     <main className="page-shell">

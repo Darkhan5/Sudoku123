@@ -31,7 +31,7 @@ function isRoomState(value: Partial<RoomState>, code: string): value is RoomStat
 export async function GET(_request: Request, { params }: { params: { code?: string } }) {
   const code = codeFromParams(params);
   if (!isValidRoomCode(code)) {
-    return NextResponse.json({ error: "Invalid PvP room code." }, { status: 400 });
+    return NextResponse.json({ error: "Некорректный код комнаты арены." }, { status: 400 });
   }
   if (isPvpPersistenceMissingOnVercel()) {
     return NextResponse.json({ error: PVP_PERSISTENCE_ERROR }, { status: 503 });
@@ -45,7 +45,7 @@ export async function GET(_request: Request, { params }: { params: { code?: stri
 export async function POST(request: Request, { params }: { params: { code?: string } }) {
   const code = codeFromParams(params);
   if (!isValidRoomCode(code)) {
-    return NextResponse.json({ error: "Invalid PvP room code." }, { status: 400 });
+    return NextResponse.json({ error: "Некорректный код комнаты арены." }, { status: 400 });
   }
   if (isPvpPersistenceMissingOnVercel()) {
     return NextResponse.json({ error: PVP_PERSISTENCE_ERROR }, { status: 503 });
@@ -53,7 +53,7 @@ export async function POST(request: Request, { params }: { params: { code?: stri
 
   const payload = (await request.json().catch(() => null)) as Partial<RoomState> | null;
   if (!payload || !isRoomState(payload, code)) {
-    return NextResponse.json({ error: "Invalid PvP room payload." }, { status: 400 });
+    return NextResponse.json({ error: "Некорректные данные комнаты арены." }, { status: 400 });
   }
 
   const current = await store.read(code);

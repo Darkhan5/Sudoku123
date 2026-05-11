@@ -26,7 +26,7 @@ interface StripeSessionStatus {
 }
 
 function stripeErrorMessage(payload: StripeSessionStatus): string {
-  return payload.error?.message ?? "Stripe session status request failed";
+  return payload.error?.message ?? "Не удалось получить статус сессии Stripe";
 }
 
 export async function GET(request: Request) {
@@ -34,11 +34,11 @@ export async function GET(request: Request) {
   const sessionId = new URL(request.url).searchParams.get("session_id");
 
   if (!secretKey) {
-    return NextResponse.json({ error: "Stripe is not configured. Add STRIPE_SECRET_KEY to .env.local locally or Vercel Environment Variables in production." }, { status: 503 });
+    return NextResponse.json({ error: "Stripe не настроен. Добавь STRIPE_SECRET_KEY в .env.local локально или в переменные окружения Vercel." }, { status: 503 });
   }
 
   if (!sessionId) {
-    return NextResponse.json({ error: "Missing session_id." }, { status: 400 });
+    return NextResponse.json({ error: "Не передан session_id." }, { status: 400 });
   }
 
   const response = await fetch(`https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(sessionId)}`, {
@@ -59,7 +59,7 @@ export async function GET(request: Request) {
     try {
       fulfillment = await fulfillCheckoutSession(payload);
     } catch (error) {
-      console.error("Stripe session fulfillment error:", error);
+      console.error("Ошибка начисления Stripe-сессии:", error);
       fulfillment = {
         fulfilled: false,
         alreadyProcessed: false,
