@@ -15,11 +15,22 @@ export default function LeaderboardPage() {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [currentRank, setCurrentRank] = useState<number | null>(null);
   const [leaderboardDate, setLeaderboardDate] = useState("");
+  const [today, setToday] = useState(() => todayIso());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
     setPlayer(getPlayer() ?? initPlayer());
+  }, []);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setToday((current) => {
+        const next = todayIso();
+        return current === next ? current : next;
+      });
+    }, 60_000);
+    return () => window.clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -30,7 +41,7 @@ export default function LeaderboardPage() {
       setLoading(true);
       setError("");
       try {
-        const response = await fetchLeaderboard(tab, player.id, player.city, todayIso());
+        const response = await fetchLeaderboard(tab, player.id, player.city, today);
         if (cancelled) return;
         setLeaderboardDate(response.date);
         setCurrentRank(response.currentRank);
@@ -51,7 +62,7 @@ export default function LeaderboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [player, tab]);
+  }, [player, tab, today]);
 
   return (
     <main className="page-shell">

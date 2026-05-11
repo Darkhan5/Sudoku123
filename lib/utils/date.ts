@@ -1,11 +1,12 @@
-export function todayIso(): string {
-  return new Date().toISOString().split("T")[0];
+const KAZAKHSTAN_UTC_OFFSET_MS = 5 * 60 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+export function todayIso(date = new Date()): string {
+  return new Date(date.getTime() + KAZAKHSTAN_UTC_OFFSET_MS).toISOString().split("T")[0];
 }
 
 export function yesterdayIso(date = new Date()): string {
-  const copy = new Date(date);
-  copy.setUTCDate(copy.getUTCDate() - 1);
-  return copy.toISOString().split("T")[0];
+  return todayIso(new Date(date.getTime() - DAY_MS));
 }
 
 export function formatTime(totalSeconds: number): string {

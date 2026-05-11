@@ -10,6 +10,7 @@ import {
   type LeaderboardRecord
 } from "../domain/leaderboard";
 import { DEFAULT_COUNTRY, DEFAULT_COUNTRY_CODE, normalizeKazakhstanCityName } from "../domain/onboarding";
+import { todayIso } from "../utils/date";
 
 export interface LeaderboardStore {
   read(): Promise<LeaderboardRecord[]>;
@@ -66,10 +67,6 @@ function jsonResponse(payload: unknown, init?: ResponseInit): Response {
       ...init?.headers
     }
   });
-}
-
-function todayIso(now: Date): string {
-  return now.toISOString().split("T")[0];
 }
 
 function requestedDate(url: URL, now: Date): string {

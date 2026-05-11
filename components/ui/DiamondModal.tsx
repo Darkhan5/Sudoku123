@@ -44,6 +44,17 @@ export function DiamondModal({ open, onClose }: DiamondModalProps) {
 
   useEffect(() => {
     if (!open) return;
+
+    function resetCheckoutLoading() {
+      setCheckoutLoading(null);
+    }
+
+    window.addEventListener("pageshow", resetCheckoutLoading);
+    return () => window.removeEventListener("pageshow", resetCheckoutLoading);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
@@ -183,7 +194,7 @@ export function DiamondModal({ open, onClose }: DiamondModalProps) {
               ))}
             </ul>
             <button type="button" className="btn-primary mt-5 w-full" onClick={startSubscriptionCheckout} disabled={checkoutLoading !== null}>
-              {checkoutLoading === "subscription" ? "Открываем Stripe..." : "Подписаться через Stripe"}
+              {checkoutLoading === "subscription" ? "Открываем Stripe..." : "Подписаться"}
             </button>
           </aside>
         </div>

@@ -83,6 +83,16 @@ function randomFogZone(seed: number): number[] {
   return [seed % 9];
 }
 
+function zoneForCell(cell: CellPosition): number {
+  return Math.floor(cell.row / 3) * 3 + Math.floor(cell.col / 3);
+}
+
+function activeFogZone(board: number[][], given: boolean[][], selected: CellPosition | null, seed: number): number[] {
+  if (selected) return [zoneForCell(selected)];
+  const nextEmpty = firstEmpty(board, given);
+  return nextEmpty ? [zoneForCell(nextEmpty)] : randomFogZone(seed);
+}
+
 function hasStorage(): boolean {
   return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
 }
@@ -455,12 +465,12 @@ export function ArenaShell() {
         {
           id,
           until: Date.now() + ability.duration * 1000,
-          fogZones: id === "fog" ? randomFogZone(elapsed + ability.cooldown) : undefined
+          fogZones: id === "fog" ? activeFogZone(board, puzzle.given, selected, elapsed + ability.cooldown) : undefined
         }
       ]);
       setStatus(`Друг применил: ${ability.name}.`);
     },
-    [elapsed]
+    [board, elapsed, puzzle.given, selected]
   );
 
   useEffect(() => {

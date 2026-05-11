@@ -125,6 +125,7 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
   const [coachOpen, setCoachOpen] = useState(false);
   const [coachRequestId, setCoachRequestId] = useState(0);
   const [gameSeed, setGameSeed] = useState(0);
+  const [dailyDate, setDailyDate] = useState(() => todayIso());
   const [leaderboardRank, setLeaderboardRank] = useState<number | null>(null);
   const [leaderboardNotice, setLeaderboardNotice] = useState("");
   const [ornamentMode, setOrnamentModeState] = useState(false);
@@ -175,7 +176,7 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
       setPlayer(currentPlayer);
 
       if (mode === "daily") {
-        const date = todayIso();
+        const date = dailyDate;
         const saved = getDailyState(date);
         const generated = generateWithSeed(date, "medium");
 
@@ -237,12 +238,23 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
       setSelected(firstEmpty(generated.puzzle, generated.given));
       setReady(true);
     },
-    [gameSeed, mode]
+    [dailyDate, gameSeed, mode]
   );
 
   useEffect(() => {
     loadPuzzle(difficulty);
   }, [difficulty, loadPuzzle]);
+
+  useEffect(() => {
+    if (mode !== "daily") return;
+    const interval = window.setInterval(() => {
+      setDailyDate((current) => {
+        const next = todayIso();
+        return current === next ? current : next;
+      });
+    }, 60_000);
+    return () => window.clearInterval(interval);
+  }, [mode]);
 
   useEffect(() => {
     function syncPlayer() {
@@ -270,7 +282,7 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
   const persistDaily = useCallback(
     (nextBoard = board, nextNotes = notes, nextComplete = complete, nextTime = elapsed, nextMistakes = mistakes, nextHints = hintsUsed) => {
       if (mode !== "daily" || !puzzle) return;
-      const date = todayIso();
+      const date = dailyDate;
       saveDailyState({
         date,
         completed: nextComplete,
@@ -285,7 +297,7 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
         difficulty: puzzle.difficulty
       });
     },
-    [board, complete, elapsed, given, hintsUsed, mistakes, mode, notes, puzzle]
+    [board, complete, dailyDate, elapsed, given, hintsUsed, mistakes, mode, notes, puzzle]
   );
 
   useEffect(() => {
@@ -327,7 +339,7 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
     (nextBoard: number[][], nextNotes: Set<number>[][], nextMistakes: number, nextHints: number, nextElapsed: number, finalValue?: number) => {
       if (!puzzle || complete || !isBoardComplete(nextBoard, puzzle.solution)) return;
 
-      const date = todayIso();
+      const date = mode === "daily" ? dailyDate : todayIso();
       const previousDaily = mode === "daily" ? getDailyState(date) : null;
       const shouldReward = mode !== "daily" || !previousDaily?.completed;
       const current = getPlayer() ?? initPlayer();
@@ -406,7 +418,7 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
         });
       }
     },
-    [complete, given, mode, puzzle, settings]
+    [complete, dailyDate, given, mode, puzzle, settings]
   );
 
   const placeNumber = useCallback(
