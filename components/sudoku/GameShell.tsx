@@ -10,6 +10,7 @@ import { calculateProgressionReward, rankLabel } from "@/lib/domain/progression"
 import { chooseFirstDailyTitle } from "@/lib/domain/titles";
 import { getDailyState, saveDailyState } from "@/lib/storage/daily";
 import { addDiamonds } from "@/lib/storage/economy";
+import { getCompletedGameReview, requestCompletedGameReviewReturn, saveCompletedGameReview } from "@/lib/storage/gameReview";
 import { submitLeaderboardResult } from "@/lib/storage/leaderboard";
 import { getPlayer, initPlayer, recordSolvedGame, updatePlayer } from "@/lib/storage/player";
 import { getSettings, markOrnamentIntroSeen, setOrnamentMode } from "@/lib/storage/settings";
@@ -107,6 +108,29 @@ function firstEmpty(board: number[][], given: boolean[][]): CellPosition | null 
   return null;
 }
 
+function shouldOpenStoredReview(): boolean {
+  if (typeof window === "undefined") return false;
+  return new URLSearchParams(window.location.search).get("review") === "last";
+}
+
+function shouldOpenStoredReviewDetails(): boolean {
+  if (typeof window === "undefined") return false;
+  return new URLSearchParams(window.location.search).get("details") === "1";
+}
+
+function finalBoardForSession(session: GameSession): number[][] {
+  const lastMove = session.moves[session.moves.length - 1];
+  return cloneBoard(lastMove?.boardAfter ?? session.puzzle);
+}
+
+function mistakesForSession(session: GameSession): number {
+  return session.moves.filter((move) => move.action === "place" && !move.correct).length;
+}
+
+function elapsedSecondsForSession(session: GameSession): number {
+  return Math.max(0, Math.round((session.stats.totalTimeMs ?? 0) / 1000));
+}
+
 export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps) {
   const [ready, setReady] = useState(false);
   const [difficulty, setDifficulty] = useState<Difficulty>(initialDifficulty);
@@ -141,6 +165,7 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
   const [dailyDate, setDailyDate] = useState(() => todayIso());
   const [leaderboardRank, setLeaderboardRank] = useState<number | null>(null);
   const [leaderboardNotice, setLeaderboardNotice] = useState("");
+  const [reviewDetailsOpenOnRestore, setReviewDetailsOpenOnRestore] = useState(false);
   const [ornamentMode, setOrnamentModeState] = useState(false);
   const [ornamentIntroOpen, setOrnamentIntroOpen] = useState(false);
   const [ornamentPreviewOpen, setOrnamentPreviewOpen] = useState(false);
@@ -189,6 +214,8 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
     (nextDifficulty: Difficulty, forceFresh = false) => {
       const currentPlayer = initPlayer();
       setPlayer(currentPlayer);
+      const openStoredReview = !forceFresh && shouldOpenStoredReview();
+      const openStoredReviewDetails = openStoredReview && shouldOpenStoredReviewDetails();
 
       if (mode === "daily") {
         const date = dailyDate;
@@ -210,7 +237,14 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
           finishingRef.current = saved.completed;
           setGameStarted(saved.completed);
           setGameSession(saved.reviewSession ? (saved.completed ? saved.reviewSession : resumeGameSession(saved.reviewSession)) : null);
-          setGameReport(saved.reviewSession && saved.completed ? analyzeGameSession(saved.reviewSession) : null);
+          const savedReport = saved.reviewSession && saved.completed ? analyzeGameSession(saved.reviewSession) : null;
+          setGameReport(savedReport);
+          setCompletionOpen(Boolean(savedReport && openStoredReview));
+          setReviewDetailsOpenOnRestore(Boolean(savedReport && openStoredReviewDetails));
+          setReward(0);
+          setXpReward(0);
+          setIconReward(null);
+          setRankUpLabel("");
           setLeaderboardRank(null);
           setLeaderboardNotice("");
           setAwardedTitle("");
@@ -237,6 +271,7 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
         setGameStarted(false);
         setGameSession(null);
         setGameReport(null);
+        setReviewDetailsOpenOnRestore(false);
         setLeaderboardRank(null);
         setLeaderboardNotice("");
         setAwardedTitle("");
@@ -244,6 +279,52 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
         setComboMessage("");
         setComboCells(new Set());
         setSelected(firstEmpty(generated.puzzle, generated.given));
+        setReady(true);
+        return;
+      }
+
+      const storedReview = getCompletedGameReview();
+      if (openStoredReview && storedReview?.mode === "free") {
+        const restoredSession = storedReview.session;
+        const restoredBoard = finalBoardForSession(restoredSession);
+        const restoredElapsed = elapsedSecondsForSession(restoredSession);
+        const restoredMistakes = mistakesForSession(restoredSession);
+        const restoredReport = analyzeGameSession(restoredSession);
+
+        setPuzzle({
+          puzzle: restoredSession.puzzle,
+          solution: restoredSession.solution,
+          given: restoredSession.given,
+          difficulty: restoredSession.difficulty
+        });
+        setBoard(restoredBoard);
+        setInitialBoard(cloneBoard(restoredSession.puzzle));
+        setGiven(restoredSession.given);
+        setNotes(emptyNotes());
+        setNotesUsed(0);
+        setMistakes(restoredMistakes);
+        setHintsUsed(restoredSession.stats.hintsUsed);
+        setChecksUsed(restoredSession.stats.checksUsed);
+        setElapsed(restoredElapsed);
+        setComplete(true);
+        finishingRef.current = true;
+        setGameStarted(true);
+        setGameSession(restoredSession);
+        setGameReport(restoredReport);
+        setCompletionOpen(true);
+        setReviewDetailsOpenOnRestore(openStoredReviewDetails);
+        setReward(0);
+        setXpReward(0);
+        setIconReward(null);
+        setRankUpLabel("");
+        setLeaderboardRank(null);
+        setLeaderboardNotice("");
+        setAwardedTitle("");
+        setHistory([]);
+        setComboStreak(0);
+        setComboMessage("");
+        setComboCells(new Set());
+        setSelected(firstEmpty(restoredBoard, restoredSession.given));
         setReady(true);
         return;
       }
@@ -264,6 +345,7 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
       setGameStarted(false);
       setGameSession(null);
       setGameReport(null);
+      setReviewDetailsOpenOnRestore(false);
       setLeaderboardRank(null);
       setLeaderboardNotice("");
       setAwardedTitle("");
@@ -465,9 +547,19 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
       const completedSession = finalSession ? completeGameSession(finalSession, nextElapsed * 1000) : null;
       const report = completedSession ? analyzeGameSession(completedSession) : null;
 
+      if (completedSession) {
+        saveCompletedGameReview({
+          mode,
+          date,
+          session: completedSession,
+          path: mode === "daily" ? "/" : "/play"
+        });
+      }
+
       setComplete(true);
       setGameSession(completedSession);
       setGameReport(report);
+      setReviewDetailsOpenOnRestore(false);
       setReward(diamondsEarned);
       setXpReward(progression.xp);
       setIconReward(icon);
@@ -516,6 +608,11 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
     },
     [checksUsed, complete, dailyDate, given, mode, notesUsed, puzzle, settings]
   );
+
+  const openDiamondFromCompletedReview = useCallback(() => {
+    if (complete && gameReport) requestCompletedGameReviewReturn();
+    setDiamondOpen(true);
+  }, [complete, gameReport]);
 
   const placeNumber = useCallback(
     (value: number) => {
@@ -1024,8 +1121,9 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
         awardedTitle={awardedTitle}
         plan={player?.plan ?? "free"}
         report={gameReport}
+        initialDetailsOpen={reviewDetailsOpenOnRestore}
         onClose={() => setCompletionOpen(false)}
-        onOpenDiamond={() => setDiamondOpen(true)}
+        onOpenDiamond={openDiamondFromCompletedReview}
         ornamentMode={ornamentMode && canUseOrnaments}
         finalOrnament={finalOrnamentValue ? getOrnament(finalOrnamentValue) : null}
       />

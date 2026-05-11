@@ -23,6 +23,7 @@ interface CompletionModalProps {
   ornamentMode?: boolean;
   finalOrnament?: Ornament | null;
   report?: GameReport | null;
+  initialDetailsOpen?: boolean;
   onClose: () => void;
   onOpenDiamond: () => void;
 }
@@ -47,6 +48,7 @@ export function CompletionModal({
   ornamentMode = false,
   finalOrnament = null,
   report = null,
+  initialDetailsOpen = false,
   onClose,
   onOpenDiamond
 }: CompletionModalProps) {
@@ -56,10 +58,11 @@ export function CompletionModal({
 
   useEffect(() => {
     if (open) {
-      setDetailsOpen(false);
-      setDetailsRequested(false);
+      const shouldOpenDetails = Boolean(initialDetailsOpen && detailsAllowed && report);
+      setDetailsOpen(shouldOpenDetails);
+      setDetailsRequested(Boolean(initialDetailsOpen && !shouldOpenDetails));
     }
-  }, [open]);
+  }, [detailsAllowed, initialDetailsOpen, open, report]);
 
   useEffect(() => {
     if (!open || !detailsRequested || !detailsAllowed || !report) return;

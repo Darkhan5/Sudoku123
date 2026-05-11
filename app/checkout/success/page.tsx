@@ -5,6 +5,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import type { Player } from "@/types";
 import { DiamondGlyph } from "@/components/ui/DiamondGlyph";
+import { consumeCompletedGameReviewReturn, reviewReturnHref } from "@/lib/storage/gameReview";
 import { getPlayer, updatePlayer } from "@/lib/storage/player";
 import { activateSudokuPassForCurrentSeason } from "@/lib/storage/sudokuPass";
 
@@ -60,6 +61,7 @@ function CheckoutSuccessContent() {
   const [kind, setKind] = useState<SuccessKind>("unknown");
   const [message, setMessage] = useState("Проверяем оплату Stripe...");
   const [detail, setDetail] = useState("");
+  const [reviewHref, setReviewHref] = useState("");
 
   useEffect(() => {
     if (!sessionId) {
@@ -70,6 +72,7 @@ function CheckoutSuccessContent() {
     }
 
     let cancelled = false;
+    let redirectTimer: number | undefined;
     const safeSessionId = sessionId;
 
     async function checkSession() {
@@ -129,16 +132,26 @@ function CheckoutSuccessContent() {
         ) {
           activateSudokuPassForCurrentSeason();
           updateLocalPlayer({ plan: "sudoku-pass" });
+          const pendingReview = consumeCompletedGameReviewReturn();
+          const pendingReviewHref = pendingReview ? reviewReturnHref(pendingReview) : "";
 
           if (!cancelled) {
             setState("complete");
             setKind("sudoku_pass");
             setMessage("Судоку Пасс активирован.");
+            setReviewHref(pendingReviewHref);
             setDetail(
-              payload.fulfilled
-                ? `Премиум-трек активен для сезона ${payload.seasonId ?? "сейчас"}.`
-                : payload.fulfillmentReason ?? "Оплата прошла, серверное начисление ожидает вебхук."
+              pendingReviewHref
+                ? "Возвращаем тебя к подробному анализу завершённой партии."
+                : payload.fulfilled
+                  ? `Премиум-трек активен для сезона ${payload.seasonId ?? "сейчас"}.`
+                  : payload.fulfillmentReason ?? "Оплата прошла, серверное начисление ожидает вебхук."
             );
+            if (pendingReviewHref) {
+              redirectTimer = window.setTimeout(() => {
+                window.location.assign(pendingReviewHref);
+              }, 900);
+            }
           }
           return;
         }
@@ -161,6 +174,7 @@ function CheckoutSuccessContent() {
 
     return () => {
       cancelled = true;
+      if (redirectTimer) window.clearTimeout(redirectTimer);
     };
   }, [sessionId]);
 
@@ -178,6 +192,11 @@ function CheckoutSuccessContent() {
         <p className="mx-auto mt-2 max-w-xl text-sm font-semibold leading-6 text-slate-600">{message}</p>
         {detail ? <p className="mx-auto mt-2 max-w-xl text-xs font-bold leading-5 text-slate-500">{detail}</p> : null}
         <div className="mt-5 flex flex-wrap justify-center gap-2">
+          {reviewHref ? (
+            <Link href={reviewHref} className="btn-primary">
+              Вернуться к анализу
+            </Link>
+          ) : null}
           <Link href="/pass" className="btn-primary">
             Судоку Пасс
           </Link>
