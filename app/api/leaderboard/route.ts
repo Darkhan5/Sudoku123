@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic";
 
 const handlers = createLeaderboardHandlers({
   store: createLeaderboardStoreFromEnv(),
-  includeSeedEntries: true
+  includeSeedEntries: false
 });
 
 export const GET = handlers.GET;

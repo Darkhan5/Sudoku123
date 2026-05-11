@@ -46,7 +46,7 @@ describe("global leaderboard logic", () => {
     );
   });
 
-  it("ranks globally by penalty-adjusted time", () => {
+  it("ranks globally by calculated leaderboard score", () => {
     const ranked = rankLeaderboard([
       leaderboardEntry({ playerId: "clean-slow", time: 420, mistakes: 0, hintsUsed: 0 }),
       leaderboardEntry({ playerId: "fast-with-mistake", time: 300, mistakes: 1, hintsUsed: 0 }),
@@ -59,6 +59,21 @@ describe("global leaderboard logic", () => {
         ["fast-clean", 1],
         ["fast-with-mistake", 2],
         ["clean-slow", 3]
+      ]
+    );
+  });
+
+  it("recalculates legacy stored scores before ranking and display", () => {
+    const ranked = rankLeaderboard([
+      leaderboardEntry({ playerId: "legacy-fast", time: 220, mistakes: 1, hintsUsed: 0, score: 890 }),
+      leaderboardEntry({ playerId: "normal-slower", time: 386, mistakes: 0, hintsUsed: 1 })
+    ]);
+
+    assert.deepEqual(
+      ranked.map((entry) => [entry.playerId, entry.score, entry.rank]),
+      [
+        ["legacy-fast", 8760, 1],
+        ["normal-slower", 8276, 2]
       ]
     );
   });

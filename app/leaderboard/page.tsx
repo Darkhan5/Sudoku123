@@ -4,7 +4,7 @@
 
 import { useEffect, useState } from "react";
 import type { LeaderboardEntry, Player } from "@/types";
-import { LEADERBOARD_SCOPES } from "@/lib/domain/leaderboard";
+import { LEADERBOARD_SCOPES, LEADERBOARD_SCORING } from "@/lib/domain/leaderboard";
 import { fetchLeaderboard, type LeaderboardTab } from "@/lib/storage/leaderboard";
 import { getPlayer, initPlayer } from "@/lib/storage/player";
 import { formatTime, todayIso } from "@/lib/utils/date";
@@ -88,8 +88,15 @@ export default function LeaderboardPage() {
       </div>
 
       <section className="leaderboard-table">
-        <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
-          <h2 className="font-bold text-slate-950">{tab === "city" ? `Сегодня в городе ${player?.city ?? ""}` : "Сегодня в Казахстане"}</h2>
+        <div className="flex flex-col gap-2 border-b border-slate-200 px-4 py-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h2 className="font-bold text-slate-950">{tab === "city" ? `Сегодня в городе ${player?.city ?? ""}` : "Сегодня в Казахстане"}</h2>
+            <p className="mt-1 max-w-3xl text-xs font-medium text-slate-500">
+              Места идут по очкам: {LEADERBOARD_SCORING.baseScore.toLocaleString("ru-RU")} - время x {LEADERBOARD_SCORING.timePenaltyPerSecond} - ошибки x{" "}
+              {LEADERBOARD_SCORING.mistakePenalty} - подсказки x {LEADERBOARD_SCORING.hintPenalty}. Минимум за решённую задачу:{" "}
+              {LEADERBOARD_SCORING.minScore.toLocaleString("ru-RU")}.
+            </p>
+          </div>
           <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-bold text-emerald-700">{leaderboardDate || "Сегодня"}</span>
         </div>
 

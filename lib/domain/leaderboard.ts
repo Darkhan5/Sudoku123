@@ -29,6 +29,14 @@ export interface RankedLeaderboardRecord extends LeaderboardRecord {
   isCurrentUser?: boolean;
 }
 
+export const LEADERBOARD_SCORING = {
+  baseScore: 10_000,
+  minScore: 1_000,
+  timePenaltyPerSecond: 4,
+  mistakePenalty: 360,
+  hintPenalty: 180
+} as const;
+
 export const LEADERBOARD_SCOPES: LeaderboardScopeOption[] = [
   { id: "city", label: "Город" },
   { id: "global", label: "Казахстан" }
@@ -55,7 +63,23 @@ export function penaltyTimeFor(time: number, mistakes: number, hintsUsed: number
 }
 
 export function scoreFor(time: number, mistakes: number, hintsUsed: number): number {
-  return Math.max(1000, 10_000 - penaltyTimeFor(time, mistakes, hintsUsed) * 4);
+  const safeTime = Math.max(0, Math.floor(time));
+  const safeMistakes = Math.max(0, Math.floor(mistakes));
+  const safeHints = Math.max(0, Math.floor(hintsUsed));
+  const score =
+    LEADERBOARD_SCORING.baseScore -
+    safeTime * LEADERBOARD_SCORING.timePenaltyPerSecond -
+    safeMistakes * LEADERBOARD_SCORING.mistakePenalty -
+    safeHints * LEADERBOARD_SCORING.hintPenalty;
+  return Math.max(LEADERBOARD_SCORING.minScore, score);
+}
+
+export function normalizeLeaderboardScore(entry: LeaderboardRecord): LeaderboardRecord {
+  return {
+    ...entry,
+    accuracy: accuracyFor(entry.mistakes, entry.hintsUsed),
+    score: scoreFor(entry.time, entry.mistakes, entry.hintsUsed)
+  };
 }
 
 export function seedLeaderboardEntries(date: string): LeaderboardRecord[] {
@@ -90,24 +114,29 @@ export function seedLeaderboardEntries(date: string): LeaderboardRecord[] {
 }
 
 function compareLeaderboardEntries(a: LeaderboardRecord, b: LeaderboardRecord): number {
+  const scoreDifference = scoreFor(b.time, b.mistakes, b.hintsUsed) - scoreFor(a.time, a.mistakes, a.hintsUsed);
   return (
-    penaltyTimeFor(a.time, a.mistakes, a.hintsUsed) - penaltyTimeFor(b.time, b.mistakes, b.hintsUsed) ||
+    scoreDifference ||
+    a.time - b.time ||
     a.mistakes - b.mistakes ||
     a.hintsUsed - b.hintsUsed ||
-    a.time - b.time ||
-    a.createdAt.localeCompare(b.createdAt)
+    a.createdAt.localeCompare(b.createdAt) ||
+    a.playerId.localeCompare(b.playerId)
   );
 }
 
 export function rankLeaderboard(entries: LeaderboardRecord[]): RankedLeaderboardRecord[] {
   return [...entries]
     .sort(compareLeaderboardEntries)
-    .map((entry, index) => ({
-      ...entry,
-      icon: entry.icon ?? "🧠",
-      countryFlag: countryFlag(entry.countryCode),
-      rank: index + 1
-    }));
+    .map((entry, index) => {
+      const scoredEntry = normalizeLeaderboardScore(entry);
+      return {
+        ...scoredEntry,
+        icon: scoredEntry.icon ?? "🧠",
+        countryFlag: countryFlag(scoredEntry.countryCode),
+        rank: index + 1
+      };
+    });
 }
 
 export function filterLeaderboard(entries: LeaderboardRecord[], scope: LeaderboardScope, city = ""): LeaderboardRecord[] {
@@ -125,12 +154,14 @@ function isBetterEntry(next: LeaderboardRecord, current: LeaderboardRecord): boo
 }
 
 export function upsertLeaderboardEntry(entries: LeaderboardRecord[], nextEntry: LeaderboardRecord): LeaderboardRecord[] {
-  const index = entries.findIndex((entry) => entry.playerId === nextEntry.playerId && entry.date === nextEntry.date);
-  if (index < 0) return [...entries, nextEntry];
+  const normalizedEntries = entries.map(normalizeLeaderboardScore);
+  const normalizedNextEntry = normalizeLeaderboardScore(nextEntry);
+  const index = normalizedEntries.findIndex((entry) => entry.playerId === normalizedNextEntry.playerId && entry.date === normalizedNextEntry.date);
+  if (index < 0) return [...normalizedEntries, normalizedNextEntry];
 
-  if (!isBetterEntry(nextEntry, entries[index])) return entries;
+  if (!isBetterEntry(normalizedNextEntry, normalizedEntries[index])) return normalizedEntries;
 
-  const nextEntries = [...entries];
-  nextEntries[index] = nextEntry;
+  const nextEntries = [...normalizedEntries];
+  nextEntries[index] = normalizedNextEntry;
   return nextEntries;
 }

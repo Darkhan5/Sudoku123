@@ -4,6 +4,7 @@ import {
   accuracyFor,
   filterLeaderboard,
   isLeaderboardScope,
+  normalizeLeaderboardScore,
   rankLeaderboard,
   seedLeaderboardEntries,
   scoreFor,
@@ -137,12 +138,12 @@ function parseSubmitPayload(payload: SubmitPayload, now: Date): LeaderboardRecor
 function normalizeStoredLeaderboardEntry(entry: LeaderboardRecord): LeaderboardRecord | null {
   const city = normalizeKazakhstanCityName(entry.city);
   if (!city) return null;
-  return {
+  return normalizeLeaderboardScore({
     ...entry,
     city,
     country: DEFAULT_COUNTRY,
     countryCode: DEFAULT_COUNTRY_CODE
-  };
+  });
 }
 
 function normalizeStoredLeaderboardEntries(entries: LeaderboardRecord[]): LeaderboardRecord[] {
