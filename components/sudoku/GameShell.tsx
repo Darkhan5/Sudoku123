@@ -6,6 +6,7 @@ import { rollIcon } from "@/lib/data/icons";
 import { calculatePuzzleDiamondReward } from "@/lib/domain/economy";
 import { scoreFor } from "@/lib/domain/leaderboard";
 import { calculateProgressionReward, rankLabel } from "@/lib/domain/progression";
+import { chooseFirstDailyTitle } from "@/lib/domain/titles";
 import { getDailyState, saveDailyState } from "@/lib/storage/daily";
 import { addDiamonds } from "@/lib/storage/economy";
 import { submitLeaderboardResult } from "@/lib/storage/leaderboard";
@@ -86,6 +87,10 @@ function snapshotFrom(board: number[][], notes: Set<number>[][], mistakes: numbe
   };
 }
 
+function countNotes(notes: Set<number>[][]): number {
+  return notes.reduce((total, row) => total + row.reduce((rowTotal, cell) => rowTotal + cell.size, 0), 0);
+}
+
 function keyOf(cell: CellPosition): string {
   return `${cell.row}:${cell.col}`;
 }
@@ -107,6 +112,7 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
   const [initialBoard, setInitialBoard] = useState<number[][]>(EMPTY_BOARD);
   const [given, setGiven] = useState<boolean[][]>(EMPTY_GIVEN);
   const [notes, setNotes] = useState<Set<number>[][]>(() => emptyNotes());
+  const [notesUsed, setNotesUsed] = useState(0);
   const [selected, setSelected] = useState<CellPosition | null>(null);
   const [notesMode, setNotesMode] = useState(false);
   const [mistakes, setMistakes] = useState(0);
@@ -120,7 +126,7 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
   const [xpReward, setXpReward] = useState(0);
   const [iconReward, setIconReward] = useState<CollectibleIcon | null>(null);
   const [rankUpLabel, setRankUpLabel] = useState("");
-  const [needsTitleReward, setNeedsTitleReward] = useState(false);
+  const [awardedTitle, setAwardedTitle] = useState("");
   const [diamondOpen, setDiamondOpen] = useState(false);
   const [coachOpen, setCoachOpen] = useState(false);
   const [coachRequestId, setCoachRequestId] = useState(0);
@@ -186,12 +192,14 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
           setInitialBoard(cloneBoard(generated.puzzle));
           setGiven(saved.given);
           setNotes(hydrateNotes(saved.notes));
+          setNotesUsed(saved.notesUsed ?? 0);
           setMistakes(saved.mistakes);
           setHintsUsed(saved.hintsUsed);
           setElapsed(saved.time);
           setComplete(saved.completed);
           setLeaderboardRank(null);
           setLeaderboardNotice("");
+          setAwardedTitle("");
           setComboStreak(0);
           setComboMessage("");
           setComboCells(new Set());
@@ -205,12 +213,14 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
         setInitialBoard(cloneBoard(generated.puzzle));
         setGiven(generated.given);
         setNotes(emptyNotes());
+        setNotesUsed(0);
         setMistakes(0);
         setHintsUsed(0);
         setElapsed(0);
         setComplete(false);
         setLeaderboardRank(null);
         setLeaderboardNotice("");
+        setAwardedTitle("");
         setComboStreak(0);
         setComboMessage("");
         setComboCells(new Set());
@@ -225,12 +235,14 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
       setInitialBoard(cloneBoard(generated.puzzle));
       setGiven(generated.given);
       setNotes(emptyNotes());
+      setNotesUsed(0);
       setMistakes(0);
       setHintsUsed(0);
       setElapsed(0);
       setComplete(false);
       setLeaderboardRank(null);
       setLeaderboardNotice("");
+      setAwardedTitle("");
       setHistory([]);
       setComboStreak(0);
       setComboMessage("");
@@ -280,7 +292,15 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
   }, []);
 
   const persistDaily = useCallback(
-    (nextBoard = board, nextNotes = notes, nextComplete = complete, nextTime = elapsed, nextMistakes = mistakes, nextHints = hintsUsed) => {
+    (
+      nextBoard = board,
+      nextNotes = notes,
+      nextComplete = complete,
+      nextTime = elapsed,
+      nextMistakes = mistakes,
+      nextHints = hintsUsed,
+      nextNotesUsed = notesUsed
+    ) => {
       if (mode !== "daily" || !puzzle) return;
       const date = dailyDate;
       saveDailyState({
@@ -294,10 +314,11 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
         solution: puzzle.solution,
         given,
         notes: serializeNotes(nextNotes),
+        notesUsed: nextNotesUsed,
         difficulty: puzzle.difficulty
       });
     },
-    [board, complete, dailyDate, elapsed, given, hintsUsed, mistakes, mode, notes, puzzle]
+    [board, complete, dailyDate, elapsed, given, hintsUsed, mistakes, mode, notes, notesUsed, puzzle]
   );
 
   useEffect(() => {
@@ -373,22 +394,32 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
       if (diamondsEarned > 0) addDiamonds(diamondsEarned);
       const updatedPlayer = getPlayer() ?? completedPlayer;
       const rankChanged = (current.rank ?? "bronze-i") !== (updatedPlayer.rank ?? "bronze-i");
+      const firstDailyTitle =
+        mode === "daily" && !current.firstTitleClaimed
+          ? chooseFirstDailyTitle({
+              time: nextElapsed,
+              mistakes: nextMistakes,
+              hintsUsed: nextHints,
+              notesCount: Math.max(notesUsed, countNotes(nextNotes))
+            })
+          : "";
+      const profilePlayer = firstDailyTitle ? updatePlayer({ title: firstDailyTitle, firstTitleClaimed: true }) : updatedPlayer;
 
       setComplete(true);
       setReward(diamondsEarned);
       setXpReward(progression.xp);
       setIconReward(icon);
       setRankUpLabel(rankChanged ? rankLabel(updatedPlayer.rank ?? "bronze-i") : "");
-      setNeedsTitleReward(!current.firstTitleClaimed);
+      setAwardedTitle(firstDailyTitle);
       setFinalOrnamentValue(finalValue ?? null);
       setCompletionOpen(true);
-      setPlayer(updatedPlayer);
+      setPlayer(profilePlayer);
       playFeedback(settings, rankChanged ? "rank-up" : "victory");
 
       if (mode === "daily") {
         setLeaderboardNotice("Сохраняем результат в рейтинг...");
         submitLeaderboardResult({
-          player: updatedPlayer,
+          player: profilePlayer,
           date,
           time: nextElapsed,
           mistakes: nextMistakes,
@@ -414,11 +445,12 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
           solution: puzzle.solution,
           given,
           notes: serializeNotes(nextNotes),
+          notesUsed,
           difficulty: puzzle.difficulty
         });
       }
     },
-    [complete, dailyDate, given, mode, puzzle, settings]
+    [complete, dailyDate, given, mode, notesUsed, puzzle, settings]
   );
 
   const placeNumber = useCallback(
@@ -429,10 +461,13 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
         pushHistory();
         const nextNotes = notes.map((row) => row.map((cell) => new Set(cell)));
         const cell = nextNotes[selected.row][selected.col];
-        if (cell.has(value)) cell.delete(value);
-        else cell.add(value);
+        const addingNote = !cell.has(value);
+        if (addingNote) cell.add(value);
+        else cell.delete(value);
+        const nextNotesUsed = notesUsed + (addingNote ? 1 : 0);
+        if (addingNote) setNotesUsed(nextNotesUsed);
         setNotes(nextNotes);
-        persistDaily(board, nextNotes, false, elapsed, mistakes, hintsUsed);
+        persistDaily(board, nextNotes, false, elapsed, mistakes, hintsUsed, nextNotesUsed);
         playFeedback(settings, "tap");
         return;
       }
@@ -477,7 +512,7 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
       persistDaily(nextBoard, nextNotes, false, elapsed, nextMistakes, hintsUsed);
       finishIfSolved(nextBoard, nextNotes, nextMistakes, hintsUsed, elapsed, value);
     },
-    [board, comboCells, comboStreak, elapsed, finishIfSolved, given, hintsUsed, locked, mistakes, notes, notesMode, persistDaily, pushHistory, puzzle, selected, settings, triggerScreenShake]
+    [board, comboCells, comboStreak, elapsed, finishIfSolved, given, hintsUsed, locked, mistakes, notes, notesMode, notesUsed, persistDaily, pushHistory, puzzle, selected, settings, triggerScreenShake]
   );
 
   const eraseSelected = useCallback(() => {
@@ -768,14 +803,10 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
         iconReward={iconReward}
         rank={leaderboardRank}
         rankUpLabel={rankUpLabel}
-        needsTitleReward={needsTitleReward}
+        awardedTitle={awardedTitle}
         plan={player?.plan ?? "free"}
         onClose={() => setCompletionOpen(false)}
         onOpenDiamond={() => setDiamondOpen(true)}
-        onSaveTitle={(title) => {
-          setPlayer(updatePlayer({ title, firstTitleClaimed: true }));
-          setNeedsTitleReward(false);
-        }}
         ornamentMode={ornamentMode && canUseOrnaments}
         finalOrnament={finalOrnamentValue ? getOrnament(finalOrnamentValue) : null}
       />

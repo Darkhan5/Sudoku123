@@ -82,6 +82,7 @@ export interface DailyState {
   solution?: number[][];
   given?: boolean[][];
   notes?: number[][][];
+  notesUsed?: number;
   difficulty?: Difficulty;
 }
 
