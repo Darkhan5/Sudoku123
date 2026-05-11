@@ -4,8 +4,9 @@ import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import type { Player } from "@/types";
-import { getPlayer, updatePlayer } from "@/lib/storage/player";
 import { DiamondGlyph } from "@/components/ui/DiamondGlyph";
+import { getPlayer, updatePlayer } from "@/lib/storage/player";
+import { activateSudokuPassForCurrentSeason } from "@/lib/storage/sudokuPass";
 
 interface SessionStatusResponse {
   status?: string;
@@ -17,6 +18,7 @@ interface SessionStatusResponse {
   purchase?: string | null;
   packId?: string | null;
   diamonds?: number | null;
+  seasonId?: string | null;
   fulfilled?: boolean;
   alreadyProcessed?: boolean;
   databasePlan?: string | null;
@@ -25,7 +27,7 @@ interface SessionStatusResponse {
 }
 
 type CheckoutState = "checking" | "complete" | "open" | "error";
-type SuccessKind = "diamond_pack" | "subscription" | "unknown";
+type SuccessKind = "diamond_pack" | "sudoku_pass" | "unknown";
 
 function processedSessionKey(sessionId: string): string {
   return `sl_stripe_session_${sessionId}`;
@@ -56,14 +58,14 @@ function CheckoutSuccessContent() {
   const sessionId = searchParams.get("session_id");
   const [state, setState] = useState<CheckoutState>("checking");
   const [kind, setKind] = useState<SuccessKind>("unknown");
-  const [message, setMessage] = useState("Проверяем оплату в Stripe...");
+  const [message, setMessage] = useState("Checking Stripe payment...");
   const [detail, setDetail] = useState("");
 
   useEffect(() => {
     if (!sessionId) {
       setState("error");
-      setMessage("Stripe не вернул session_id.");
-      setDetail("Вернитесь в магазин и попробуйте открыть оплату ещё раз.");
+      setMessage("Stripe did not return a session_id.");
+      setDetail("Return to the store and try opening checkout again.");
       return;
     }
 
@@ -76,14 +78,14 @@ function CheckoutSuccessContent() {
         const payload = (await response.json().catch(() => ({}))) as SessionStatusResponse;
 
         if (!response.ok) {
-          throw new Error(payload.error ?? "Не удалось проверить Stripe-сессию.");
+          throw new Error(payload.error ?? "Could not verify the Stripe session.");
         }
 
         if (payload.status === "open") {
           if (!cancelled) {
             setState("open");
-            setMessage("Оплата ещё не завершена.");
-            setDetail("Если вы уже оплатили, подождите несколько секунд и обновите страницу.");
+            setMessage("Payment is still open.");
+            setDetail("If you already paid, wait a few seconds and refresh this page.");
           }
           return;
         }
@@ -91,8 +93,8 @@ function CheckoutSuccessContent() {
         if (payload.status !== "complete") {
           if (!cancelled) {
             setState("error");
-            setMessage("Stripe-сессия не завершилась успешно.");
-            setDetail(payload.fulfillmentReason ?? "Покупка не была активирована.");
+            setMessage("Stripe session did not complete successfully.");
+            setDetail(payload.fulfillmentReason ?? "The purchase was not activated.");
           }
           return;
         }
@@ -101,36 +103,41 @@ function CheckoutSuccessContent() {
           const alreadyProcessedLocally = isLocalSessionProcessed(safeSessionId);
           if (!alreadyProcessedLocally) {
             const currentDiamonds = getPlayer()?.diamonds ?? 0;
-            updateLocalPlayer({
-              diamonds: currentDiamonds + payload.diamonds
-            });
+            updateLocalPlayer({ diamonds: currentDiamonds + payload.diamonds });
             markLocalSessionProcessed(safeSessionId);
           }
 
           if (!cancelled) {
             setState("complete");
             setKind("diamond_pack");
-            setMessage(alreadyProcessedLocally ? "Эта покупка уже была начислена." : `Начислено ${payload.diamonds.toLocaleString("ru-RU")} алмазов.`);
+            setMessage(alreadyProcessedLocally ? "This purchase was already credited." : `Credited ${payload.diamonds.toLocaleString("ru-RU")} diamonds.`);
             setDetail(
               payload.fulfilled
-                ? "Покупка сохранена на сервере и синхронизирована с вашим профилем."
-                : payload.fulfillmentReason ?? "Оплата прошла, но серверная запись ещё ожидает webhook."
+                ? "Purchase was saved on the server and synced to your local profile."
+                : payload.fulfillmentReason ?? "Payment succeeded; server fulfillment is waiting for the webhook."
             );
           }
           return;
         }
 
-        if (payload.plan === "diamond" || payload.databasePlan === "diamond") {
-          updateLocalPlayer({ plan: "diamond" });
+        if (
+          payload.purchase === "sudoku_pass" ||
+          payload.plan === "sudoku-pass" ||
+          payload.databasePlan === "sudoku-pass" ||
+          payload.plan === "diamond" ||
+          payload.databasePlan === "diamond"
+        ) {
+          activateSudokuPassForCurrentSeason();
+          updateLocalPlayer({ plan: "sudoku-pass" });
 
           if (!cancelled) {
             setState("complete");
-            setKind("subscription");
-            setMessage("Diamond активирован.");
+            setKind("sudoku_pass");
+            setMessage("Sudoku Pass activated.");
             setDetail(
               payload.fulfilled
-                ? "Подписка сохранена на сервере и включена в вашем профиле."
-                : payload.fulfillmentReason ?? "Оплата прошла, но серверная запись ещё ожидает webhook."
+                ? `Premium track is active for ${payload.seasonId ?? "the current season"}.`
+                : payload.fulfillmentReason ?? "Payment succeeded; server fulfillment is waiting for the webhook."
             );
           }
           return;
@@ -138,14 +145,14 @@ function CheckoutSuccessContent() {
 
         if (!cancelled) {
           setState("error");
-          setMessage("Оплата прошла, но товар не распознан.");
-          setDetail(payload.fulfillmentReason ?? "Проверьте metadata Stripe Checkout-сессии.");
+          setMessage("Payment succeeded, but the product was not recognized.");
+          setDetail(payload.fulfillmentReason ?? "Check Stripe Checkout metadata.");
         }
       } catch (error) {
         if (!cancelled) {
           setState("error");
-          setMessage(error instanceof Error ? error.message : "Не удалось проверить Stripe-сессию.");
-          setDetail("Проверьте dev-сервер и Stripe webhook.");
+          setMessage(error instanceof Error ? error.message : "Could not verify the Stripe session.");
+          setDetail("Check the dev server and Stripe webhook.");
         }
       }
     }
@@ -157,8 +164,8 @@ function CheckoutSuccessContent() {
     };
   }, [sessionId]);
 
-  const title = state === "checking" ? "Проверяем оплату" : state === "complete" ? "Покупка прошла успешно" : "Покупка не активирована";
-  const badge = state === "complete" ? (kind === "subscription" ? "Diamond" : "Алмазы") : "Stripe Checkout";
+  const title = state === "checking" ? "Checking Payment" : state === "complete" ? "Purchase Complete" : "Purchase Not Activated";
+  const badge = state === "complete" ? (kind === "sudoku_pass" ? "Sudoku Pass" : "Diamonds") : "Stripe Checkout";
 
   return (
     <main className="page-shell">
@@ -171,11 +178,11 @@ function CheckoutSuccessContent() {
         <p className="mx-auto mt-2 max-w-xl text-sm font-semibold leading-6 text-slate-600">{message}</p>
         {detail ? <p className="mx-auto mt-2 max-w-xl text-xs font-bold leading-5 text-slate-500">{detail}</p> : null}
         <div className="mt-5 flex flex-wrap justify-center gap-2">
-          <Link href="/profile" className="btn-primary">
-            Профиль
+          <Link href="/pass" className="btn-primary">
+            Sudoku Pass
           </Link>
           <Link href="/play" className="btn-secondary">
-            Играть
+            Play
           </Link>
         </div>
       </section>
@@ -185,7 +192,7 @@ function CheckoutSuccessContent() {
 
 export default function CheckoutSuccessPage() {
   return (
-    <Suspense fallback={<main className="page-shell">Проверяем оплату...</main>}>
+    <Suspense fallback={<main className="page-shell">Checking payment...</main>}>
       <CheckoutSuccessContent />
     </Suspense>
   );

@@ -6,11 +6,12 @@ import { DiamondCounter } from "@/components/ui/DiamondCounter";
 import { StreakBadge } from "@/components/ui/StreakBadge";
 
 const NAV_ITEMS = [
-  { href: "/", label: "Сегодня", icon: "today" },
-  { href: "/play", label: "Игра", icon: "play" },
+  { href: "/", label: "Today", icon: "today" },
+  { href: "/play", label: "Play", icon: "play" },
+  { href: "/pass", label: "Pass", icon: "pass" },
   { href: "/arena", label: "PvP", icon: "pvp" },
-  { href: "/leaderboard", label: "Рейтинг", icon: "leaderboard" },
-  { href: "/profile", label: "Профиль", icon: "profile" }
+  { href: "/leaderboard", label: "Rating", icon: "leaderboard" },
+  { href: "/profile", label: "Profile", icon: "profile" }
 ];
 
 function NavIcon({ name }: { name: string }) {
@@ -40,6 +41,15 @@ function NavIcon({ name }: { name: string }) {
     return (
       <svg {...common}>
         <path d="M8 5v14l11-7z" />
+      </svg>
+    );
+  }
+
+  if (name === "pass") {
+    return (
+      <svg {...common}>
+        <path d="M4 7a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v2a2 2 0 0 0 0 4v2a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-2a2 2 0 0 0 0-4z" />
+        <path d="M9 8h6M9 12h6M9 16h3" />
       </svg>
     );
   }
@@ -76,10 +86,10 @@ export function Navigation() {
     <>
       <header className="fixed inset-x-0 top-0 z-30 hidden h-16 border-b border-slate-200 bg-white/90 backdrop-blur md:block">
         <div className="mx-auto flex h-full max-w-6xl items-center justify-between px-6">
-          <Link href="/" className="text-lg font-black text-slate-950" aria-label="Судоку">
-            Судоку
+          <Link href="/" className="text-lg font-black text-slate-950" aria-label="Sudoku">
+            Sudoku
           </Link>
-          <nav className="flex items-center gap-1" aria-label="Основная навигация">
+          <nav className="flex items-center gap-1" aria-label="Main navigation">
             {NAV_ITEMS.map((item) => {
               const active = pathname === item.href;
               return (
@@ -100,8 +110,8 @@ export function Navigation() {
       </header>
 
       <header className="fixed inset-x-0 top-0 z-30 flex h-16 items-center justify-between border-b border-slate-200 bg-white/95 px-4 backdrop-blur md:hidden">
-        <Link href="/" className="text-base font-black text-slate-950" aria-label="Судоку">
-          Судоку
+        <Link href="/" className="text-base font-black text-slate-950" aria-label="Sudoku">
+          Sudoku
         </Link>
         <div className="flex items-center gap-2">
           <StreakBadge />
@@ -110,8 +120,8 @@ export function Navigation() {
       </header>
 
       <nav
-        className="fixed inset-x-0 bottom-0 z-30 grid h-16 grid-cols-5 border-t border-slate-200 bg-white/95 px-2 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
-        aria-label="Основная навигация"
+        className="fixed inset-x-0 bottom-0 z-30 grid h-16 grid-cols-6 border-t border-slate-200 bg-white/95 px-2 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
+        aria-label="Main navigation"
       >
         {NAV_ITEMS.map((item) => {
           const active = pathname === item.href;

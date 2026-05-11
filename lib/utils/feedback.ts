@@ -1,4 +1,5 @@
 import type { Settings } from "../../types";
+import { getExperiencePack } from "@/lib/domain/experiencePacks";
 
 type FeedbackTone = "tap" | "success" | "combo" | "victory" | "sabotage" | "error" | "rank-up";
 
@@ -36,10 +37,29 @@ function playTone(context: AudioContext, tone: FeedbackTone, frequency: number, 
   oscillator.stop(startAt + duration + 0.02);
 }
 
-export function playFeedback(settings: Pick<Settings, "sound">, tone: FeedbackTone): void {
+function soundProfile(settings: Pick<Settings, "theme">): "quiet-electric" | "page-asmr" | "soft-sine" {
+  return getExperiencePack(settings.theme ?? "standard").layers.sound as "quiet-electric" | "page-asmr" | "soft-sine";
+}
+
+export function playFeedback(settings: Pick<Settings, "sound" | "theme">, tone: FeedbackTone): void {
   if (!settings.sound) return;
   const context = getAudioContext();
   if (!context) return;
+  const profile = soundProfile(settings);
+
+  if (profile === "quiet-electric") {
+    const base = tone === "error" ? 180 : tone === "victory" || tone === "rank-up" ? 880 : 640;
+    playTone(context, "tap", base, context.currentTime, 0.045, 0.018);
+    playTone(context, "tap", base * 1.5, context.currentTime + 0.018, 0.035, 0.012);
+    return;
+  }
+
+  if (profile === "page-asmr") {
+    const base = tone === "error" ? 180 : tone === "victory" || tone === "rank-up" ? 620 : 420;
+    playTone(context, "tap", base, context.currentTime, 0.08, 0.018);
+    if (tone === "victory" || tone === "rank-up") playTone(context, "tap", 520, context.currentTime + 0.06, 0.12, 0.012);
+    return;
+  }
 
   if (tone === "combo") {
     playTone(context, tone, FREQUENCIES.combo, context.currentTime, 0.11, 0.038);

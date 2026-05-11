@@ -18,6 +18,7 @@ import { generateWithSeed } from "@/lib/sudoku/generator";
 import { getConflicts, isBoardComplete } from "@/lib/sudoku/validator";
 import { getPlayer, initPlayer, recordSolvedGame, updatePlayer } from "@/lib/storage/player";
 import { getSettings } from "@/lib/storage/settings";
+import { recordPassPuzzleSolved } from "@/lib/storage/sudokuPass";
 import { playFeedback } from "@/lib/utils/feedback";
 import { Board } from "@/components/sudoku/Board";
 import { Controls } from "@/components/sudoku/Controls";
@@ -503,6 +504,7 @@ export function ArenaShell() {
 
     if (won) {
       recordSolvedGame({ time: elapsed, mistakes, hintsUsed: 0, difficulty: puzzle.difficulty, arenaWin: true });
+      recordPassPuzzleSolved({ mode: "arena", difficulty: puzzle.difficulty, mistakes, arenaWin: true });
     } else {
       const current = getPlayer() ?? player;
       const nextXp = (current.xp ?? 0) + xp;

@@ -40,7 +40,8 @@ export async function POST(request: Request) {
       received: true,
       fulfilled: true,
       alreadyProcessed: fulfillment.alreadyProcessed,
-      type: fulfillment.plan ? "subscription" : "diamond_pack"
+      type: fulfillment.passSeasonId || fulfillment.plan ? "sudoku_pass" : "diamond_pack",
+      seasonId: fulfillment.passSeasonId ?? null
     });
   } catch (error) {
     console.error("Stripe webhook fulfillment error:", error);

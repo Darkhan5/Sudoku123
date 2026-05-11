@@ -35,7 +35,7 @@ const DEFAULT_SETTINGS: Settings = {
   accessibility: DEFAULT_ACCESSIBILITY,
   accessibilityColors: DEFAULT_ACCESSIBILITY_COLORS
 };
-const VALID_THEMES: ThemeName[] = ["standard", "diamond-white", "diamond-black", "diamond-felt"];
+const VALID_THEMES: ThemeName[] = ["standard", "diamond-white", "diamond-black", "diamond-felt", "cyber-grid", "library-ink"];
 const VALID_NUMBER_STYLES: NumberStyle[] = ["classic", "neon", "pixel", "handwritten"];
 
 function hasStorage(): boolean {

@@ -106,6 +106,6 @@ export function getOrnament(value: number): Ornament | null {
   return ORNAMENTS.find((ornament) => ornament.value === value) ?? null;
 }
 
-export function canUseOrnamentMode(plan: "free" | "diamond"): boolean {
-  return plan === "diamond";
+export function canUseOrnamentMode(plan: "free" | "diamond" | "sudoku-pass"): boolean {
+  return plan === "diamond" || plan === "sudoku-pass";
 }

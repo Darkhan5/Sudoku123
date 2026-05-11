@@ -6,17 +6,19 @@ import { buildStreakCalendar } from "@/lib/domain/streak";
 interface StreakModalProps {
   open: boolean;
   player: Player | null;
+  streakOverride?: number;
+  playedDatesOverride?: string[];
   onClose: () => void;
 }
 
 const WEEKDAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
 
-export function StreakModal({ open, player, onClose }: StreakModalProps) {
+export function StreakModal({ open, player, streakOverride, playedDatesOverride, onClose }: StreakModalProps) {
   if (!open) return null;
 
-  const playedDates = player?.playedDates ?? (player?.lastPlayedDate ? [player.lastPlayedDate] : []);
+  const playedDates = playedDatesOverride?.length ? playedDatesOverride : player?.playedDates ?? (player?.lastPlayedDate ? [player.lastPlayedDate] : []);
   const calendar = buildStreakCalendar(playedDates);
-  const streak = player?.streak ?? 0;
+  const streak = streakOverride ?? player?.streak ?? 0;
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/60 px-4 backdrop-blur-sm" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>

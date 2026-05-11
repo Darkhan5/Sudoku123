@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { DIAMOND_STORE_PACKS, type DiamondStorePackId } from "@/lib/domain/economy";
-import { DIAMOND_PLAN } from "@/lib/domain/subscription";
+import { SUDOKU_PASS_PLAN } from "@/lib/domain/subscription";
 import { getPlayer } from "@/lib/storage/player";
 import { DiamondGlyph } from "@/components/ui/DiamondGlyph";
 
@@ -13,9 +13,9 @@ interface DiamondModalProps {
   onUpgrade?: () => void;
 }
 
-type CheckoutLoading = "subscription" | DiamondStorePackId | null;
+type CheckoutLoading = "sudoku_pass" | DiamondStorePackId | null;
 type CheckoutRequestBody = {
-  type: "subscription" | "diamond_pack";
+  type: "sudoku_pass" | "diamond_pack";
   packId?: DiamondStorePackId;
   playerId?: string;
 };
@@ -64,7 +64,7 @@ export function DiamondModal({ open, onClose }: DiamondModalProps) {
 
   if (!open || !mounted) return null;
 
-  async function startCheckout(body: { type: "subscription" } | { type: "diamond_pack"; packId: DiamondStorePackId }, loadingKey: CheckoutLoading) {
+  async function startCheckout(body: { type: "sudoku_pass" } | { type: "diamond_pack"; packId: DiamondStorePackId }, loadingKey: CheckoutLoading) {
     setCheckoutLoading(loadingKey);
     setNotice("");
 
@@ -95,7 +95,7 @@ export function DiamondModal({ open, onClose }: DiamondModalProps) {
   }
 
   function startSubscriptionCheckout() {
-    void startCheckout({ type: "subscription" }, "subscription");
+    void startCheckout({ type: "sudoku_pass" }, "sudoku_pass");
   }
 
   function startPackCheckout(packId: DiamondStorePackId) {
@@ -132,7 +132,7 @@ export function DiamondModal({ open, onClose }: DiamondModalProps) {
             <div className="min-w-0">
               <p className="text-sm font-semibold text-cyan-200">Судоку</p>
               <h2 className="mt-1 text-3xl font-black">Магазин алмазов</h2>
-              <p className="mt-2 text-sm text-slate-300">Подписка и разовые наборы алмазов открываются через Stripe Checkout.</p>
+              <p className="mt-2 text-sm text-slate-300">Sudoku Pass and diamond packs open through Stripe Checkout.</p>
             </div>
           </div>
         </div>
@@ -183,18 +183,18 @@ export function DiamondModal({ open, onClose }: DiamondModalProps) {
 
           <aside className="diamond-membership-panel">
             <div className="flex items-center justify-between gap-3">
-              <p className="text-xs font-black uppercase text-cyan-700">Подписка</p>
+              <p className="text-xs font-black uppercase text-cyan-700">Sudoku Pass</p>
               <DiamondGlyph className="diamond-glyph-lg" />
             </div>
-            <h3>{DIAMOND_PLAN.name}</h3>
-            <strong>{DIAMOND_PLAN.priceMonthly}</strong>
+            <h3>{SUDOKU_PASS_PLAN.name}</h3>
+            <strong>{SUDOKU_PASS_PLAN.priceMonthly}</strong>
             <ul>
-              {DIAMOND_PLAN.features.map((feature) => (
+              {SUDOKU_PASS_PLAN.features.map((feature) => (
                 <li key={feature}>{feature}</li>
               ))}
             </ul>
             <button type="button" className="btn-primary mt-5 w-full" onClick={startSubscriptionCheckout} disabled={checkoutLoading !== null}>
-              {checkoutLoading === "subscription" ? "Открываем Stripe..." : "Подписаться"}
+              {checkoutLoading === "sudoku_pass" ? "Opening Stripe..." : "Buy Sudoku Pass"}
             </button>
           </aside>
         </div>

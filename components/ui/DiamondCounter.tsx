@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { claimDailyLoginDiamonds } from "@/lib/storage/economy";
 import { getPlayer } from "@/lib/storage/player";
 import { DiamondModal } from "@/components/ui/DiamondModal";
 import { DiamondGlyph } from "@/components/ui/DiamondGlyph";
@@ -14,13 +13,11 @@ export function DiamondCounter() {
   const initialized = useRef(false);
 
   useEffect(() => {
-    const loginClaimed = claimDailyLoginDiamonds();
-
     function sync() {
       const player = getPlayer();
       const next = player?.diamonds ?? 0;
       if (!initialized.current) {
-        previous.current = loginClaimed ? Math.max(0, next - 1) : next;
+        previous.current = next;
         initialized.current = true;
       }
       if (next > previous.current) {

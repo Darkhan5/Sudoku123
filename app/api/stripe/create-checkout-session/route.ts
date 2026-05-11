@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDiamondStorePack, getDiamondStorePackTotalDiamonds, type DiamondStorePackId } from "@/lib/domain/economy";
+import { getCurrentSudokuPassSeason } from "@/lib/domain/sudokuPass";
 
 export const dynamic = "force-dynamic";
 
@@ -100,7 +101,7 @@ export async function POST(request: Request) {
   const checkoutRequest = await readCheckoutRequest(request);
   const checkoutType = checkoutRequest.type ?? "subscription";
 
-  if (checkoutType !== "subscription" && checkoutType !== "diamond_pack") {
+  if (checkoutType !== "sudoku_pass" && checkoutType !== "subscription" && checkoutType !== "diamond_pack") {
     return NextResponse.json({ error: "Unsupported checkout type." }, { status: 400 });
   }
 
@@ -130,12 +131,13 @@ export async function POST(request: Request) {
       metadata.packId = pack.id;
       metadata.diamonds = String(getDiamondStorePackTotalDiamonds(pack));
     } else {
-      const configuredPriceId = process.env.STRIPE_DIAMOND_PRICE_ID ?? process.env.STRIPE_PRICE_ID;
+      const season = getCurrentSudokuPassSeason();
+      const configuredPriceId = process.env.STRIPE_SUDOKU_PASS_PRICE_ID ?? process.env.STRIPE_DIAMOND_PRICE_ID ?? process.env.STRIPE_PRICE_ID;
 
       if (!configuredPriceId) {
         return NextResponse.json(
           {
-            error: "Stripe subscription is not configured. Add STRIPE_DIAMOND_PRICE_ID to .env.local locally or Vercel Environment Variables in production."
+            error: "Stripe Sudoku Pass is not configured. Add STRIPE_SUDOKU_PASS_PRICE_ID to .env.local locally or Vercel Environment Variables in production."
           },
           { status: 503 }
         );
@@ -143,7 +145,10 @@ export async function POST(request: Request) {
 
       checkoutPriceId = await resolvePriceId(secretKey, configuredPriceId, true);
       checkoutMode = "subscription";
-      metadata.plan = "diamond";
+      metadata.purchase = "sudoku_pass";
+      metadata.plan = "sudoku-pass";
+      metadata.seasonId = season.id;
+      metadata.seasonEndsAt = season.endsAt;
     }
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Stripe price lookup failed" }, { status: 400 });

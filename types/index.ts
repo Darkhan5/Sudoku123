@@ -1,7 +1,7 @@
 export type Difficulty = "easy" | "medium" | "hard" | "expert";
-export type Plan = "free" | "diamond";
+export type Plan = "free" | "diamond" | "sudoku-pass";
 export type Rarity = "common" | "rare" | "epic";
-export type ThemeName = "standard" | "diamond-white" | "diamond-black" | "diamond-felt";
+export type ThemeName = "standard" | "diamond-white" | "diamond-black" | "diamond-felt" | "cyber-grid" | "library-ink";
 export type NumberStyle = "classic" | "neon" | "pixel" | "handwritten";
 export type RankedTier = "bronze-i" | "bronze-ii" | "silver-i" | "silver-ii" | "gold-i" | "gold-ii";
 export type ProfileTitle = string;

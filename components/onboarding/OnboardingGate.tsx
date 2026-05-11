@@ -3,6 +3,7 @@
 import { FormEvent, useState } from "react";
 import { KAZAKHSTAN_CITIES, validateOnboarding } from "@/lib/domain/onboarding";
 import { createOnboardedPlayer, getPlayer, savePlayer } from "@/lib/storage/player";
+import { markFirstStreakIntroPending } from "@/lib/storage/streakIntro";
 
 interface OnboardingGateProps {
   onComplete: () => void;
@@ -23,6 +24,7 @@ export function OnboardingGate({ onComplete }: OnboardingGateProps) {
     }
 
     savePlayer(createOnboardedPlayer(result.profile, getPlayer()));
+    markFirstStreakIntroPending();
     onComplete();
   }
 

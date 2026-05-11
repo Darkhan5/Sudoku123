@@ -2,6 +2,7 @@ import { promises as fs } from "fs";
 import os from "os";
 import path from "path";
 import { getDiamondStorePack, getDiamondStorePackTotalDiamonds, type DiamondStorePackId } from "../domain/economy";
+import { getCurrentSudokuPassSeason } from "../domain/sudokuPass";
 import type { Plan } from "../../types";
 
 export interface StripeCheckoutSessionForFulfillment {
@@ -18,6 +19,8 @@ export interface StripeCheckoutSessionForFulfillment {
     packId?: string;
     plan?: string;
     playerId?: string;
+    seasonId?: string;
+    seasonEndsAt?: string;
   } | null;
 }
 
@@ -26,12 +29,14 @@ export interface StripeCustomerRecord {
   playerIds: string[];
   diamonds: number;
   plan: Plan;
+  activePassSeasonIds?: string[];
   processedSessionIds: string[];
   purchases: Array<{
     sessionId: string;
-    type: "diamond_pack" | "subscription";
+    type: "diamond_pack" | "subscription" | "sudoku_pass";
     packId?: DiamondStorePackId;
     diamonds?: number;
+    seasonId?: string;
     createdAt: string;
   }>;
   updatedAt: string;
@@ -47,7 +52,8 @@ export interface FulfillmentResult {
   alreadyProcessed: boolean;
   email?: string;
   playerId?: string;
-  plan?: Extract<Plan, "diamond">;
+  plan?: Extract<Plan, "sudoku-pass" | "diamond">;
+  passSeasonId?: string;
   packId?: DiamondStorePackId;
   diamonds?: number;
   databasePlan?: Plan;
@@ -120,6 +126,7 @@ export async function fulfillCheckoutSession(
     playerIds: [],
     diamonds: 0,
     plan: "free",
+    activePassSeasonIds: [],
     processedSessionIds: [],
     purchases: [],
     updatedAt: createdAt
@@ -156,17 +163,20 @@ export async function fulfillCheckoutSession(
       diamonds,
       databasePlan: record.plan
     };
-  } else if (metadata.plan === "diamond") {
-    record.plan = "diamond";
+  } else if (metadata.purchase === "sudoku_pass" || metadata.plan === "sudoku-pass" || metadata.plan === "diamond") {
+    const seasonId = metadata.seasonId || getCurrentSudokuPassSeason(now()).id;
+    record.plan = "sudoku-pass";
+    record.activePassSeasonIds = unique([...(record.activePassSeasonIds ?? []), seasonId]);
     record.processedSessionIds.push(sessionId);
-    record.purchases.push({ sessionId, type: "subscription", createdAt });
+    record.purchases.push({ sessionId, type: metadata.plan === "diamond" ? "subscription" : "sudoku_pass", seasonId, createdAt });
     record.updatedAt = createdAt;
     result = {
       fulfilled: true,
       alreadyProcessed: false,
       email,
       playerId,
-      plan: "diamond",
+      plan: "sudoku-pass",
+      passSeasonId: seasonId,
       databasePlan: record.plan
     };
   } else {

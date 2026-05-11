@@ -34,7 +34,7 @@ export function PlayerCard({ player }: PlayerCardProps) {
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           <h1 className="truncate text-2xl font-black text-slate-950">{player.name}</h1>
-          {player.plan === "diamond" ? (
+          {player.plan === "diamond" || player.plan === "sudoku-pass" ? (
             <span className="diamond-icon-badge" role="img" aria-label="Алмазная подписка">
               <DiamondGlyph className="diamond-glyph-sm" />
             </span>

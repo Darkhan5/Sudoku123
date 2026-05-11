@@ -1,26 +1,26 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
-  DIAMOND_PLAN,
+  SUDOKU_PASS_PLAN,
   canUseCoach,
   canUseTheme,
   getCoachLimit,
   getThemeCatalog,
-  isDiamondSubscriber
+  isSudokuPassSubscriber
 } from "../../lib/domain/subscription";
 
 describe("subscription access", () => {
-  it("exposes only one premium subscription named Diamond", () => {
-    assert.equal(DIAMOND_PLAN.id, "diamond");
-    assert.equal(DIAMOND_PLAN.name, "Алмазная подписка");
-    assert.equal(DIAMOND_PLAN.priceMonthly, "2 500 тг/месяц");
-    assert.deepEqual(DIAMOND_PLAN.features, ["Эксклюзивные паки цифр", "Особые орнаменты", "Косметика профиля", "Дополнительные PvP-эффекты", "Будущие сезонные награды"]);
+  it("exposes Sudoku Pass as the premium product", () => {
+    assert.equal(SUDOKU_PASS_PLAN.id, "sudoku-pass");
+    assert.equal(SUDOKU_PASS_PLAN.name, "Sudoku Pass");
+    assert.equal(SUDOKU_PASS_PLAN.priceMonthly, "2 500 tg/month");
+    assert.ok(SUDOKU_PASS_PLAN.features.some((feature) => feature.includes("Premium reward track")));
   });
 
-  it("gives Diamond users unlimited AI Coach access", () => {
-    assert.equal(getCoachLimit("diamond"), Number.POSITIVE_INFINITY);
-    assert.equal(canUseCoach("diamond", 10_000), true);
-    assert.equal(isDiamondSubscriber({ plan: "diamond" }), true);
+  it("gives Sudoku Pass users unlimited AI Coach access", () => {
+    assert.equal(getCoachLimit("sudoku-pass"), Number.POSITIVE_INFINITY);
+    assert.equal(canUseCoach("sudoku-pass", 10_000), true);
+    assert.equal(isSudokuPassSubscriber({ plan: "sudoku-pass" }), true);
   });
 
   it("keeps free users on a finite coach limit", () => {
@@ -29,20 +29,14 @@ describe("subscription access", () => {
     assert.equal(canUseCoach("free", 3), false);
   });
 
-  it("unlocks exactly three switchable profile and board themes for Diamond", () => {
+  it("unlocks Experience Pack themes for Sudoku Pass", () => {
     const themes = getThemeCatalog();
 
-    assert.equal(themes.length, 3);
-    assert.ok(themes.every((theme) => theme.subscription === "diamond"));
-    assert.deepEqual(
-      themes.map((theme) => theme.id),
-      ["diamond-white", "diamond-black", "diamond-felt"]
-    );
-    assert.deepEqual(
-      themes.map((theme) => theme.name),
-      ["Белая доска", "Чёрная доска", "Войлочная доска"]
-    );
-    assert.ok(themes.every((theme) => canUseTheme("diamond", theme.id)));
-    assert.equal(canUseTheme("free", themes[0].id), false);
+    assert.ok(themes.length >= 5);
+    assert.ok(themes.every((theme) => theme.subscription === "sudoku-pass"));
+    assert.ok(themes.some((theme) => theme.id === "cyber-grid"));
+    assert.ok(themes.some((theme) => theme.id === "library-ink"));
+    assert.ok(themes.every((theme) => canUseTheme("sudoku-pass", theme.id)));
+    assert.equal(canUseTheme("free", "cyber-grid"), false);
   });
 });

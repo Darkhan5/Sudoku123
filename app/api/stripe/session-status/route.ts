@@ -18,6 +18,7 @@ interface StripeSessionStatus {
     purchase?: string;
     packId?: string;
     playerId?: string;
+    seasonId?: string;
   } | null;
   error?: {
     message?: string;
@@ -77,6 +78,7 @@ export async function GET(request: Request) {
     purchase: payload.metadata?.purchase ?? null,
     packId: pack?.id ?? null,
     diamonds: pack ? getDiamondStorePackTotalDiamonds(pack) : null,
+    seasonId: fulfillment?.passSeasonId ?? payload.metadata?.seasonId ?? null,
     fulfilled: fulfillment?.fulfilled ?? false,
     alreadyProcessed: fulfillment?.alreadyProcessed ?? false,
     databasePlan: fulfillment?.databasePlan ?? null,

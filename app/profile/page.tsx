@@ -10,6 +10,7 @@ import { canUseTheme, getThemeCatalog } from "@/lib/domain/subscription";
 import { KAZAKHSTAN_CITIES } from "@/lib/domain/onboarding";
 import { spendDiamonds } from "@/lib/storage/economy";
 import { getPlayer, initPlayer, updatePlayer } from "@/lib/storage/player";
+import { canUseExperiencePack } from "@/lib/storage/sudokuPass";
 import { getSettings, setAccessibilitySettings, setNumberStyle, setTheme } from "@/lib/storage/settings";
 
 const DIAMOND_THEMES = getThemeCatalog();
@@ -111,7 +112,7 @@ export default function ProfilePage() {
 
   function chooseTheme(nextTheme: ThemeName) {
     if (!player) return;
-    if (!canUseTheme(player.plan, nextTheme)) {
+    if (!canUseTheme(player.plan, nextTheme) || !canUseExperiencePack(nextTheme)) {
       setDiamondOpen(true);
       return;
     }
@@ -301,7 +302,7 @@ export default function ProfilePage() {
 
         <div className="mt-4 grid gap-2 sm:grid-cols-3">
           {DIAMOND_THEMES.map((item) => {
-            const locked = !canUseTheme(player.plan, item.id);
+            const locked = !canUseTheme(player.plan, item.id) || !canUseExperiencePack(item.id);
             return (
               <button
                 key={item.id}

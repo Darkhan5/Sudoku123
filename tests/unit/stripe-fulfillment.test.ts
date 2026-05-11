@@ -55,16 +55,18 @@ describe("Stripe fulfillment", () => {
     assert.deepEqual(store.records[0].processedSessionIds, ["cs_test_pack"]);
   });
 
-  it("activates Diamond subscription by customer email", async () => {
+  it("activates Sudoku Pass for the current season by customer email", async () => {
     const store = createMemoryStore();
     const result = await fulfillCheckoutSession(
       {
-        id: "cs_test_subscription",
+        id: "cs_test_pass",
         mode: "subscription",
         status: "complete",
-        customer_details: { email: "diamond@example.com" },
+        customer_details: { email: "pass@example.com" },
         metadata: {
-          plan: "diamond",
+          purchase: "sudoku_pass",
+          plan: "sudoku-pass",
+          seasonId: "season-1",
           playerId: "player-2"
         }
       },
@@ -72,8 +74,10 @@ describe("Stripe fulfillment", () => {
     );
 
     assert.equal(result.fulfilled, true);
-    assert.equal(result.plan, "diamond");
-    assert.equal(store.records[0].plan, "diamond");
+    assert.equal(result.plan, "sudoku-pass");
+    assert.equal(result.passSeasonId, "season-1");
+    assert.equal(store.records[0].plan, "sudoku-pass");
+    assert.deepEqual(store.records[0].activePassSeasonIds, ["season-1"]);
     assert.deepEqual(store.records[0].playerIds, ["player-2"]);
   });
 

@@ -12,6 +12,7 @@ import { addDiamonds } from "@/lib/storage/economy";
 import { submitLeaderboardResult } from "@/lib/storage/leaderboard";
 import { getPlayer, initPlayer, recordSolvedGame, updatePlayer } from "@/lib/storage/player";
 import { getSettings, markOrnamentIntroSeen, setOrnamentMode } from "@/lib/storage/settings";
+import { recordPassPuzzleSolved } from "@/lib/storage/sudokuPass";
 import { playFeedback } from "@/lib/utils/feedback";
 import { todayIso } from "@/lib/utils/date";
 import { generatePuzzle, generateWithSeed } from "@/lib/sudoku/generator";
@@ -380,6 +381,7 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
         current.xp ?? 0
       );
       const completedPlayer = recordSolvedGame({ time: nextElapsed, mistakes: nextMistakes, hintsUsed: nextHints, date, difficulty: puzzle.difficulty });
+      recordPassPuzzleSolved({ mode, difficulty: puzzle.difficulty, mistakes: nextMistakes });
       const rewardBreakdown = shouldReward
         ? calculatePuzzleDiamondReward({
             difficulty: puzzle.difficulty,
@@ -758,7 +760,7 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
               </div>
               <div className="stat-pill">
                 <span className="text-slate-500">Профиль</span>
-                <strong>{player?.plan === "diamond" ? "💎" : "Бесплатно"}</strong>
+                <strong>{player?.plan === "diamond" || player?.plan === "sudoku-pass" ? "Pass" : "Бесплатно"}</strong>
               </div>
               <div className="stat-pill">
                 <span className="text-slate-500">Рейтинг</span>

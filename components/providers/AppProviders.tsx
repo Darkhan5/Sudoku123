@@ -2,12 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { OnboardingGate } from "@/components/onboarding/OnboardingGate";
+import { DailyLoginRewardLayer } from "@/components/ui/DailyLoginRewardLayer";
+import { FirstStreakIntro } from "@/components/ui/FirstStreakIntro";
 import { getSettings } from "@/lib/storage/settings";
 import { getPlayer, isPlayerOnboarded } from "@/lib/storage/player";
+import { consumeFirstStreakIntroPending } from "@/lib/storage/streakIntro";
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
   const [onboarded, setOnboarded] = useState(false);
+  const [firstStreakIntroOpen, setFirstStreakIntroOpen] = useState(false);
 
   useEffect(() => {
     setOnboarded(isPlayerOnboarded(getPlayer()));
@@ -23,11 +27,27 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
     document.documentElement.style.setProperty("--a11y-selected-width", `${settings.accessibility?.selectedCell.borderThickness ?? 4}px`);
     document.documentElement.style.setProperty("--a11y-hint", settings.accessibilityColors?.hint ?? "#0f766e");
     document.documentElement.style.setProperty("--a11y-related", settings.accessibility?.relatedCells.highlightColor ?? "#64748b");
+    setFirstStreakIntroOpen(consumeFirstStreakIntroPending());
     setReady(true);
   }, []);
 
   if (!ready) return null;
-  if (!onboarded) return <OnboardingGate onComplete={() => setOnboarded(true)} />;
+  if (!onboarded) {
+    return (
+      <OnboardingGate
+        onComplete={() => {
+          setOnboarded(true);
+          setFirstStreakIntroOpen(true);
+        }}
+      />
+    );
+  }
 
-  return <>{children}</>;
+  return (
+    <>
+      {children}
+      <DailyLoginRewardLayer suppressDayOneToast={firstStreakIntroOpen} />
+      <FirstStreakIntro open={firstStreakIntroOpen} onDone={() => setFirstStreakIntroOpen(false)} />
+    </>
+  );
 }
