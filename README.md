@@ -94,6 +94,8 @@ CLI напечатает `whsec_...`; вставь это значение в `S
 
 Для Vercel добавь все переменные окружения из `.env.local` в Project Settings -> Environment Variables. `.env.local` специально находится в `.gitignore`: секреты нельзя отправлять в GitHub. Секреты должны быть только без префикса `NEXT_PUBLIC_`, кроме `NEXT_PUBLIC_SITE_URL`.
 
+После push в `main` проверяй в Vercel, что Production Deployment собран именно с последнего commit hash из GitHub.
+
 PvP-комнаты и рейтинг локально пишутся в `.data`, но на Vercel файловая система не подходит для постоянного состояния. Без `SUPABASE_URL` и `SUPABASE_SERVICE_ROLE_KEY` друг не сможет стабильно подключиться к комнате, а дневной результат не сохранится в рейтинг. Для нормальной работы на деплое подключи Supabase и создай таблицы:
 
 ```sql
