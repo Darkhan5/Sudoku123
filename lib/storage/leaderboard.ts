@@ -19,10 +19,11 @@ export interface SubmitLeaderboardResult {
   hintsUsed: number;
 }
 
-export async function fetchLeaderboard(tab: LeaderboardTab, playerId?: string, city?: string): Promise<LeaderboardResponse> {
+export async function fetchLeaderboard(tab: LeaderboardTab, playerId?: string, city?: string, date?: string): Promise<LeaderboardResponse> {
   const params = new URLSearchParams({ tab });
   if (playerId) params.set("playerId", playerId);
   if (city) params.set("city", city);
+  if (date) params.set("date", date);
 
   const response = await fetch(`/api/leaderboard?${params.toString()}`, { cache: "no-store" });
   if (!response.ok) {

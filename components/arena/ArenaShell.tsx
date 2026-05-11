@@ -36,6 +36,9 @@ const EMPTY_COOLDOWNS: Record<SabotageId, number> = {
   "remove-notes": 0,
   "hidden-combination": 0
 };
+const COUNTDOWN_SECONDS = 3;
+const COUNTDOWN_MS = COUNTDOWN_SECONDS * 1000;
+const ROOM_POLL_MS = 700;
 
 const COMBO_MILESTONES: Record<number, string> = {
   5: "Отлично!",
@@ -110,8 +113,12 @@ async function readRoomFromServer(code: string): Promise<RoomState | null> {
   return payload.room ?? null;
 }
 
-function cacheRoom(room: RoomState): RoomState {
-  const next = { ...room, updatedAt: Date.now() };
+function isNewerRoom(next: RoomState, current: RoomState | null): boolean {
+  return !current || next.updatedAt >= current.updatedAt;
+}
+
+function cacheRoom(room: RoomState, touch = false): RoomState {
+  const next = { ...room, updatedAt: touch ? Date.now() : room.updatedAt || Date.now() };
   if (hasStorage()) localStorage.setItem(roomKey(room.code), JSON.stringify(next));
   return next;
 }
@@ -130,13 +137,13 @@ async function writeRoomToServer(room: RoomState): Promise<RoomState | null> {
 }
 
 async function saveRoom(room: RoomState): Promise<RoomState> {
-  const cached = cacheRoom(room);
+  const cached = cacheRoom(room, true);
   const serverRoom = await writeRoomToServer(cached);
   return cacheRoom(serverRoom ?? cached);
 }
 
 function writeRoom(room: RoomState): RoomState {
-  const next = cacheRoom(room);
+  const next = cacheRoom(room, true);
   void writeRoomToServer(next).catch(() => undefined);
   return next;
 }
@@ -245,7 +252,7 @@ export function ArenaShell() {
     setComboMessage("");
     setCooldowns(EMPTY_COOLDOWNS);
     setEffects([]);
-    setCountdown(3);
+    setCountdown(COUNTDOWN_SECONDS);
     setWinner(null);
     setRewardGranted(false);
     setRewardXp(0);
@@ -254,11 +261,11 @@ export function ArenaShell() {
 
   const syncRoom = useCallback(() => {
     const next = readRoom(code);
-    if (next) setRoom(next);
+    if (next) setRoom((current) => (isNewerRoom(next, current) ? next : current));
     void readRoomFromServer(code).then((serverRoom) => {
       if (!serverRoom) return;
-      if (hasStorage()) localStorage.setItem(roomKey(code), JSON.stringify(serverRoom));
-      setRoom(serverRoom);
+      const cached = cacheRoom(serverRoom);
+      setRoom((current) => (isNewerRoom(cached, current) ? cached : current));
     }).catch((error) => {
       setStatus(error instanceof Error ? error.message : "PvP временно недоступен.");
     });
@@ -351,7 +358,7 @@ export function ArenaShell() {
 
   useEffect(() => {
     window.addEventListener("storage", syncRoom);
-    const interval = window.setInterval(syncRoom, 1000);
+    const interval = window.setInterval(syncRoom, ROOM_POLL_MS);
     return () => {
       window.removeEventListener("storage", syncRoom);
       window.clearInterval(interval);
@@ -368,22 +375,36 @@ export function ArenaShell() {
 
   useEffect(() => {
     if (matchState !== "ready" || !selfReady || !friendReady || !friendConnected) return;
+    if (room && !room.startedAt) {
+      setRoom(writeRoom({ ...room, startedAt: Date.now() + COUNTDOWN_MS }));
+    }
     setMatchState("countdown");
-    setCountdown(3);
+    setCountdown(COUNTDOWN_SECONDS);
     setStatus("Оба готовы. Старт через несколько секунд.");
-  }, [friendConnected, friendReady, matchState, selfReady]);
+  }, [friendConnected, friendReady, matchState, room, selfReady]);
 
   useEffect(() => {
-    if (matchState !== "countdown") return;
-    if (countdown === 0) {
-      setMatchState("playing");
-      setStatus("Матч начался. Решай быстрее и используй саботажи с умом.");
-      if (room && !room.startedAt) setRoom(writeRoom({ ...room, startedAt: Date.now() }));
-      return;
+    const startAt = room?.startedAt;
+    if (typeof startAt !== "number" || (matchState !== "ready" && matchState !== "countdown")) return;
+    const matchStartAt = startAt;
+
+    function syncCountdown() {
+      const msLeft = matchStartAt - Date.now();
+      if (msLeft <= 0) {
+        setCountdown(0);
+        setMatchState("playing");
+        setStatus("Матч начался. Решай быстрее и используй саботажи с умом.");
+        return;
+      }
+      setMatchState("countdown");
+      setCountdown(Math.max(1, Math.ceil(msLeft / 1000)));
+      setStatus("Оба готовы. Старт через несколько секунд.");
     }
-    const timer = window.setTimeout(() => setCountdown((current) => current - 1), 800);
-    return () => window.clearTimeout(timer);
-  }, [countdown, matchState, room]);
+
+    syncCountdown();
+    const timer = window.setInterval(syncCountdown, 200);
+    return () => window.clearInterval(timer);
+  }, [matchState, room?.startedAt]);
 
   useEffect(() => {
     if (matchState !== "playing") return;

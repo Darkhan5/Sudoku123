@@ -4,6 +4,7 @@ import {
   LEADERBOARD_SCOPES,
   filterLeaderboard,
   rankLeaderboard,
+  scoreFor,
   upsertLeaderboardEntry
 } from "../../lib/domain/leaderboard";
 
@@ -20,9 +21,17 @@ const baseEntry = {
   mistakes: 0,
   hintsUsed: 1,
   accuracy: 96,
-  score: 900,
+  score: scoreFor(320, 0, 1),
   createdAt: "2026-05-09T00:00:00.000Z"
 };
+
+function leaderboardEntry(overrides: Partial<typeof baseEntry>) {
+  const entry = { ...baseEntry, ...overrides };
+  return {
+    ...entry,
+    score: overrides.score ?? scoreFor(entry.time, entry.mistakes, entry.hintsUsed)
+  };
+}
 
 describe("global leaderboard logic", () => {
   it("supports only city and global scopes", () => {
@@ -30,21 +39,25 @@ describe("global leaderboard logic", () => {
       LEADERBOARD_SCOPES.map((scope) => scope.id),
       ["city", "global"]
     );
+    assert.deepEqual(
+      LEADERBOARD_SCOPES.map((scope) => scope.label),
+      ["Город", "Казахстан"]
+    );
   });
 
-  it("ranks globally by score, accuracy, and time", () => {
+  it("ranks globally by penalty-adjusted time", () => {
     const ranked = rankLeaderboard([
-      { ...baseEntry, playerId: "slow", score: 900, accuracy: 96, time: 420 },
-      { ...baseEntry, playerId: "winner", score: 950, accuracy: 91, time: 500 },
-      { ...baseEntry, playerId: "fast", score: 900, accuracy: 96, time: 300 }
+      leaderboardEntry({ playerId: "clean-slow", time: 420, mistakes: 0, hintsUsed: 0 }),
+      leaderboardEntry({ playerId: "fast-with-mistake", time: 300, mistakes: 1, hintsUsed: 0 }),
+      leaderboardEntry({ playerId: "fast-clean", time: 320, mistakes: 0, hintsUsed: 0 })
     ]);
 
     assert.deepEqual(
       ranked.map((entry) => [entry.playerId, entry.rank]),
       [
-        ["winner", 1],
-        ["fast", 2],
-        ["slow", 3]
+        ["fast-clean", 1],
+        ["fast-with-mistake", 2],
+        ["clean-slow", 3]
       ]
     );
   });
@@ -63,11 +76,11 @@ describe("global leaderboard logic", () => {
   });
 
   it("keeps the better daily result for the same player", () => {
-    const initial = [{ ...baseEntry, score: 800, time: 400 }];
-    const updated = upsertLeaderboardEntry(initial, { ...baseEntry, score: 850, time: 380 });
-    const rejected = upsertLeaderboardEntry(updated, { ...baseEntry, score: 700, time: 200 });
+    const initial = [leaderboardEntry({ score: 800, time: 400, mistakes: 0, hintsUsed: 0 })];
+    const updated = upsertLeaderboardEntry(initial, leaderboardEntry({ score: 850, time: 380, mistakes: 0, hintsUsed: 0 }));
+    const rejected = upsertLeaderboardEntry(updated, leaderboardEntry({ score: 700, time: 200, mistakes: 3, hintsUsed: 0 }));
 
-    assert.equal(updated[0].score, 850);
-    assert.equal(rejected[0].score, 850);
+    assert.equal(updated[0].time, 380);
+    assert.equal(rejected[0].time, 380);
   });
 });

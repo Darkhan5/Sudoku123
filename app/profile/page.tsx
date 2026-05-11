@@ -7,7 +7,7 @@ import { DiamondModal } from "@/components/ui/DiamondModal";
 import { DiamondGlyph } from "@/components/ui/DiamondGlyph";
 import { NUMBER_PACKS, isNumberPackUnlocked } from "@/lib/domain/cosmetics";
 import { canUseTheme, getThemeCatalog } from "@/lib/domain/subscription";
-import { CITY_INPUT_AUTOCOMPLETE } from "@/lib/domain/onboarding";
+import { KAZAKHSTAN_CITIES } from "@/lib/domain/onboarding";
 import { spendDiamonds } from "@/lib/storage/economy";
 import { getPlayer, initPlayer, updatePlayer } from "@/lib/storage/player";
 import { getSettings, setAccessibilitySettings, setNumberStyle, setTheme } from "@/lib/storage/settings";
@@ -234,7 +234,13 @@ export default function ProfilePage() {
 
           <label className="grid gap-2 text-sm font-semibold text-slate-700">
             Город
-            <input className="input-control" value={player.city} autoComplete={CITY_INPUT_AUTOCOMPLETE} onChange={(event) => updateProfile({ city: event.target.value })} />
+            <select className="input-control" value={player.city} onChange={(event) => updateProfile({ city: event.target.value })}>
+              {KAZAKHSTAN_CITIES.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
           </label>
         </div>
       </section>

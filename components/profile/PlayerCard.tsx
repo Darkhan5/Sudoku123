@@ -69,8 +69,8 @@ export function PlayerCard({ player }: PlayerCardProps) {
           <strong>{player.avgTime ? formatTime(player.avgTime) : "—"}</strong>
         </div>
         <div className="stat-pill">
-          <span>Точность</span>
-          <strong>{player.totalSolved ? `${player.accuracy}%` : "—"}</strong>
+          <span>Уровень</span>
+          <strong>{player.level ?? 1}</strong>
         </div>
       </div>
     </section>

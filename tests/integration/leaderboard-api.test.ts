@@ -63,8 +63,8 @@ describe("leaderboard API integration", () => {
         body: JSON.stringify({
           playerId: "user-1",
           name: "Ayan",
-          country: "Всемирный",
-          countryCode: "UN",
+          country: "Казахстан",
+          countryCode: "KZ",
           city: "Астана",
           date: "2026-05-09",
           time: 300,
@@ -79,5 +79,40 @@ describe("leaderboard API integration", () => {
 
     assert.equal(response.status, 200);
     assert.equal(payload.entries.length, 1);
+  });
+
+  it("keeps daily leaderboards separated by date", async () => {
+    const handlers = createLeaderboardHandlers({
+      store: createMemoryStore(),
+      now: () => new Date("2026-05-09T10:00:00.000Z")
+    });
+
+    for (const date of ["2026-05-08", "2026-05-09"]) {
+      await handlers.POST(
+        new Request("http://localhost/api/leaderboard", {
+          method: "POST",
+          body: JSON.stringify({
+            playerId: `user-${date}`,
+            name: "Ayan",
+            country: "Казахстан",
+            countryCode: "KZ",
+            city: "Астана",
+            date,
+            time: 300,
+            mistakes: 0,
+            hintsUsed: 0
+          })
+        })
+      );
+    }
+
+    const response = await handlers.GET(new Request("http://localhost/api/leaderboard?tab=global&date=2026-05-09"));
+    const payload = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.deepEqual(
+      payload.entries.map((entry: { date: string }) => entry.date),
+      ["2026-05-09"]
+    );
   });
 });

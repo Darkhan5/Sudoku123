@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import type { RoomState } from "@/lib/domain/arena";
+import { mergeRoomState, type RoomState } from "@/lib/domain/arena";
 import {
   PVP_PERSISTENCE_ERROR,
   createPvpRoomStoreFromEnv,
@@ -56,6 +56,7 @@ export async function POST(request: Request, { params }: { params: { code?: stri
     return NextResponse.json({ error: "Invalid PvP room payload." }, { status: 400 });
   }
 
-  const room = await store.write(payload);
+  const current = await store.read(code);
+  const room = await store.write(mergeRoomState(current, payload));
   return NextResponse.json({ room });
 }

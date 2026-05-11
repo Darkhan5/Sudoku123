@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { CITY_INPUT_AUTOCOMPLETE, validateOnboarding } from "@/lib/domain/onboarding";
+import { KAZAKHSTAN_CITIES, validateOnboarding } from "@/lib/domain/onboarding";
 import { createOnboardedPlayer, getPlayer, savePlayer } from "@/lib/storage/player";
 
 interface OnboardingGateProps {
@@ -50,12 +50,18 @@ export function OnboardingGate({ onComplete }: OnboardingGateProps) {
 
           <label className="grid gap-2 text-sm font-bold text-slate-700">
             Город
-            <input
+            <select
               className="input-control"
               value={city}
-              autoComplete={CITY_INPUT_AUTOCOMPLETE}
               onChange={(event) => setCity(event.target.value)}
-            />
+            >
+              <option value="">Выбери город</option>
+              {KAZAKHSTAN_CITIES.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
           </label>
 
           <div className="grid gap-3 md:col-span-2">

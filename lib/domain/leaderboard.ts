@@ -31,7 +31,7 @@ export interface RankedLeaderboardRecord extends LeaderboardRecord {
 
 export const LEADERBOARD_SCOPES: LeaderboardScopeOption[] = [
   { id: "city", label: "Город" },
-  { id: "global", label: "Всемирный" }
+  { id: "global", label: "Казахстан" }
 ];
 
 export function isLeaderboardScope(value: string | null): value is LeaderboardScope {
@@ -50,14 +50,27 @@ export function accuracyFor(mistakes: number, hintsUsed: number): number {
   return Math.max(0, Math.min(100, Math.round((cleanCells / solvedCells) * 100)));
 }
 
+export function penaltyTimeFor(time: number, mistakes: number, hintsUsed: number): number {
+  return time + mistakes * 90 + hintsUsed * 45;
+}
+
 export function scoreFor(time: number, mistakes: number, hintsUsed: number): number {
-  const accuracy = accuracyFor(mistakes, hintsUsed);
-  return Math.max(100, Math.round(accuracy * 12 - time - mistakes * 90 - hintsUsed * 45));
+  return Math.max(100, 1200 - penaltyTimeFor(time, mistakes, hintsUsed));
+}
+
+function compareLeaderboardEntries(a: LeaderboardRecord, b: LeaderboardRecord): number {
+  return (
+    penaltyTimeFor(a.time, a.mistakes, a.hintsUsed) - penaltyTimeFor(b.time, b.mistakes, b.hintsUsed) ||
+    a.mistakes - b.mistakes ||
+    a.hintsUsed - b.hintsUsed ||
+    a.time - b.time ||
+    a.createdAt.localeCompare(b.createdAt)
+  );
 }
 
 export function rankLeaderboard(entries: LeaderboardRecord[]): RankedLeaderboardRecord[] {
   return [...entries]
-    .sort((a, b) => b.score - a.score || b.accuracy - a.accuracy || a.time - b.time || a.createdAt.localeCompare(b.createdAt))
+    .sort(compareLeaderboardEntries)
     .map((entry, index) => ({
       ...entry,
       icon: entry.icon ?? "🧠",
@@ -77,11 +90,7 @@ export function filterLeaderboard(entries: LeaderboardRecord[], scope: Leaderboa
 }
 
 function isBetterEntry(next: LeaderboardRecord, current: LeaderboardRecord): boolean {
-  return (
-    next.score > current.score ||
-    (next.score === current.score && next.accuracy > current.accuracy) ||
-    (next.score === current.score && next.accuracy === current.accuracy && next.time < current.time)
-  );
+  return compareLeaderboardEntries(next, current) < 0;
 }
 
 export function upsertLeaderboardEntry(entries: LeaderboardRecord[], nextEntry: LeaderboardRecord): LeaderboardRecord[] {

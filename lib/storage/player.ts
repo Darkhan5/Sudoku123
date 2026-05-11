@@ -2,7 +2,7 @@ import type { Difficulty, NumberStyle, Player } from "@/types";
 import { calculateProgressionReward, mergeAchievements, rankForXp } from "@/lib/domain/progression";
 import { normalizePlayedDates } from "@/lib/domain/streak";
 import { safeJsonParse, todayIso, yesterdayIso } from "@/lib/utils/date";
-import { DEFAULT_COUNTRY, DEFAULT_COUNTRY_CODE, getCountryCode, normalizeCountryName, type OnboardingProfile } from "@/lib/domain/onboarding";
+import { DEFAULT_CITY, DEFAULT_COUNTRY, DEFAULT_COUNTRY_CODE, getCountryCode, normalizeCountryName, normalizeKazakhstanCityName, type OnboardingProfile } from "@/lib/domain/onboarding";
 import { accuracyFor } from "@/lib/domain/leaderboard";
 
 const PLAYER_KEY = "sl_player";
@@ -53,6 +53,7 @@ export function getPlayer(): Player | null {
   const country = normalizeCountryName(player.country || DEFAULT_COUNTRY);
   return withPlayerDefaults({
     ...player,
+    city: normalizeKazakhstanCityName(player.city) ?? DEFAULT_CITY,
     country,
     countryCode: getCountryCode(country) ?? player.countryCode ?? DEFAULT_COUNTRY_CODE
   });
@@ -63,6 +64,7 @@ export function savePlayer(player: Player): Player {
   const country = normalizeCountryName(player.country || DEFAULT_COUNTRY);
   const normalized = withPlayerDefaults({
     ...player,
+    city: normalizeKazakhstanCityName(player.city) ?? DEFAULT_CITY,
     country,
     countryCode: getCountryCode(country) ?? player.countryCode ?? DEFAULT_COUNTRY_CODE
   });
@@ -71,7 +73,7 @@ export function savePlayer(player: Player): Player {
   return normalized;
 }
 
-export function initPlayer(name = "Игрок", city = "Астана"): Player {
+export function initPlayer(name = "Игрок", city = DEFAULT_CITY): Player {
   const existing = getPlayer();
   if (existing) return existing;
 
@@ -80,7 +82,7 @@ export function initPlayer(name = "Игрок", city = "Астана"): Player {
     name,
     country: DEFAULT_COUNTRY,
     countryCode: DEFAULT_COUNTRY_CODE,
-    city,
+    city: normalizeKazakhstanCityName(city) ?? DEFAULT_CITY,
     onboarded: false,
     plan: "free",
     diamonds: 0,
@@ -136,7 +138,7 @@ export function createOnboardedPlayer(profile: OnboardingProfile, current: Playe
     age: profile.age,
     country: profile.country || DEFAULT_COUNTRY,
     countryCode: getCountryCode(profile.country) ?? DEFAULT_COUNTRY_CODE,
-    city: profile.city,
+    city: normalizeKazakhstanCityName(profile.city) ?? DEFAULT_CITY,
     onboarded: true
   };
 }

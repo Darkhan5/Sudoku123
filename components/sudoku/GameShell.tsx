@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { CellPosition, CollectibleIcon, Difficulty, Player, Settings, SudokuPuzzle } from "@/types";
 import { rollIcon } from "@/lib/data/icons";
 import { calculatePuzzleDiamondReward } from "@/lib/domain/economy";
+import { scoreFor } from "@/lib/domain/leaderboard";
 import { calculateProgressionReward, rankLabel } from "@/lib/domain/progression";
 import { getDailyState, saveDailyState } from "@/lib/storage/daily";
 import { addDiamonds } from "@/lib/storage/economy";
@@ -83,10 +84,6 @@ function snapshotFrom(board: number[][], notes: Set<number>[][], mistakes: numbe
     hintsUsed,
     elapsed
   };
-}
-
-function scoreFor(time: number, mistakes: number, hintsUsed: number): number {
-  return Math.max(100, 1200 - time - mistakes * 90 - hintsUsed * 45);
 }
 
 function keyOf(cell: CellPosition): string {
@@ -663,7 +660,7 @@ export function GameShell({ mode, initialDifficulty = "medium" }: GameShellProps
         <div className="toolbar-band">
           <span className="font-semibold text-slate-700">Сегодня уже решено: {elapsed ? `${Math.floor(elapsed / 60)} мин ${elapsed % 60} сек` : "готово"}</span>
           <span className="text-sm text-slate-500">
-            {leaderboardRank ? `Место во всемирном рейтинге: #${leaderboardRank}` : leaderboardNotice || "Результат сохранён в рейтинг"}
+            {leaderboardRank ? `Место в рейтинге Казахстана: #${leaderboardRank}` : leaderboardNotice || "Результат сохранён в рейтинг"}
           </span>
         </div>
       ) : null}

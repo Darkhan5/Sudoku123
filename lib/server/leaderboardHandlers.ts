@@ -9,7 +9,7 @@ import {
   upsertLeaderboardEntry,
   type LeaderboardRecord
 } from "../domain/leaderboard";
-import { DEFAULT_COUNTRY, DEFAULT_COUNTRY_CODE, getCountryCode } from "../domain/onboarding";
+import { DEFAULT_COUNTRY, DEFAULT_COUNTRY_CODE, normalizeKazakhstanCityName } from "../domain/onboarding";
 
 export interface LeaderboardStore {
   read(): Promise<LeaderboardRecord[]>;
@@ -72,6 +72,10 @@ function todayIso(now: Date): string {
   return now.toISOString().split("T")[0];
 }
 
+function requestedDate(url: URL, now: Date): string {
+  return asString(url.searchParams.get("date")) || todayIso(now);
+}
+
 function asString(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
@@ -96,10 +100,9 @@ export function isLeaderboardPersistenceMissingOnVercel(): boolean {
 function parseSubmitPayload(payload: SubmitPayload, now: Date): LeaderboardRecord | null {
   const playerId = asString(payload.playerId);
   const name = asString(payload.name);
-  const city = asString(payload.city);
-  const country = asString(payload.country) || DEFAULT_COUNTRY;
-  const explicitCountryCode = asString(payload.countryCode).toUpperCase();
-  const countryCode = explicitCountryCode || getCountryCode(country) || DEFAULT_COUNTRY_CODE;
+  const city = normalizeKazakhstanCityName(asString(payload.city));
+  const country = DEFAULT_COUNTRY;
+  const countryCode = DEFAULT_COUNTRY_CODE;
   const avatarUrl = asString(payload.avatarUrl);
   const icon = asString(payload.icon) || "🧠";
   const date = asString(payload.date);
@@ -130,6 +133,24 @@ function parseSubmitPayload(payload: SubmitPayload, now: Date): LeaderboardRecor
     score: scoreFor(time, mistakes, hintsUsed),
     createdAt: now.toISOString()
   };
+}
+
+function normalizeStoredLeaderboardEntry(entry: LeaderboardRecord): LeaderboardRecord | null {
+  const city = normalizeKazakhstanCityName(entry.city);
+  if (!city) return null;
+  return {
+    ...entry,
+    city,
+    country: DEFAULT_COUNTRY,
+    countryCode: DEFAULT_COUNTRY_CODE
+  };
+}
+
+function normalizeStoredLeaderboardEntries(entries: LeaderboardRecord[]): LeaderboardRecord[] {
+  return entries.flatMap((entry) => {
+    const normalized = normalizeStoredLeaderboardEntry(entry);
+    return normalized ? [normalized] : [];
+  });
 }
 
 export function createFileLeaderboardStore(filePath = DATA_FILE): LeaderboardStore {
@@ -244,8 +265,10 @@ export function createLeaderboardHandlers({ store, now = () => new Date() }: Lea
 
       const playerId = url.searchParams.get("playerId");
       const city = asString(url.searchParams.get("city"));
-      const entries = await store.read();
-      const ranked = rankLeaderboard(filterLeaderboard(entries, tab, city));
+      const date = requestedDate(url, now());
+      const entries = normalizeStoredLeaderboardEntries(await store.read());
+      const dailyEntries = entries.filter((entry) => entry.date === date);
+      const ranked = rankLeaderboard(filterLeaderboard(dailyEntries, tab, city));
       const current = playerId ? ranked.find((entry) => entry.playerId === playerId) : null;
 
       return jsonResponse({
@@ -255,7 +278,7 @@ export function createLeaderboardHandlers({ store, now = () => new Date() }: Lea
         })),
         currentRank: current?.rank ?? null,
         total: ranked.length,
-        date: url.searchParams.get("date") ?? todayIso(now())
+        date
       });
     },
 
@@ -275,7 +298,8 @@ export function createLeaderboardHandlers({ store, now = () => new Date() }: Lea
         const nextEntries = upsertLeaderboardEntry(entries, entry);
         await store.write(nextEntries);
 
-        const rank = rankLeaderboard(nextEntries).find((rankedEntry) => rankedEntry.playerId === entry.playerId && rankedEntry.date === entry.date);
+        const sameDayEntries = normalizeStoredLeaderboardEntries(nextEntries).filter((rankedEntry) => rankedEntry.date === entry.date);
+        const rank = rankLeaderboard(sameDayEntries).find((rankedEntry) => rankedEntry.playerId === entry.playerId);
 
         return jsonResponse({
           entry: {

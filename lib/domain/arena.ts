@@ -43,6 +43,44 @@ export interface RoomState {
   };
 }
 
+export function mergeRoomState(current: RoomState | null, incoming: RoomState, now = Date.now): RoomState {
+  if (!current || current.seed !== incoming.seed) {
+    return {
+      ...incoming,
+      host: incoming.host ?? current?.host,
+      guest: incoming.guest ?? current?.guest,
+      updatedAt: now()
+    };
+  }
+
+  const incomingEffect = incoming.lastEffect;
+  const currentEffect = current.lastEffect;
+  const lastEffect =
+    incomingEffect && (!currentEffect || incomingEffect.createdAt >= currentEffect.createdAt)
+      ? incomingEffect
+      : currentEffect;
+  const startedAt =
+    current.startedAt && incoming.startedAt
+      ? Math.min(current.startedAt, incoming.startedAt)
+      : current.startedAt ?? incoming.startedAt;
+
+  return {
+    code: current.code,
+    seed: current.seed,
+    host: incoming.host ?? current.host,
+    guest: incoming.guest ?? current.guest,
+    hostReady: current.hostReady || incoming.hostReady,
+    guestReady: current.guestReady || incoming.guestReady,
+    hostProgress: Math.max(current.hostProgress, incoming.hostProgress),
+    guestProgress: Math.max(current.guestProgress, incoming.guestProgress),
+    hostFinished: current.hostFinished || incoming.hostFinished,
+    guestFinished: current.guestFinished || incoming.guestFinished,
+    startedAt,
+    updatedAt: now(),
+    lastEffect
+  };
+}
+
 export const SABOTAGE_ABILITIES: SabotageAbility[] = [
   {
     id: "fog",
