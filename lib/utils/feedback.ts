@@ -7,7 +7,7 @@ const FREQUENCIES: Record<FeedbackTone, number> = {
   success: 760,
   combo: 920,
   victory: 1040,
-  sabotage: 180,
+  sabotage: 360,
   error: 220,
   "rank-up": 1180
 };
@@ -25,7 +25,7 @@ function getAudioContext(): AudioContext | null {
 function playTone(context: AudioContext, tone: FeedbackTone, frequency: number, startAt: number, duration: number, volume: number): void {
   const oscillator = context.createOscillator();
   const gain = context.createGain();
-  oscillator.type = tone === "sabotage" || tone === "error" ? "sawtooth" : tone === "combo" ? "triangle" : "sine";
+  oscillator.type = tone === "error" ? "sawtooth" : tone === "sabotage" || tone === "combo" ? "triangle" : "sine";
   oscillator.frequency.value = frequency;
   gain.gain.setValueAtTime(0.0001, startAt);
   gain.gain.exponentialRampToValueAtTime(volume, startAt + 0.012);
@@ -44,6 +44,12 @@ export function playFeedback(settings: Pick<Settings, "sound">, tone: FeedbackTo
   if (tone === "combo") {
     playTone(context, tone, FREQUENCIES.combo, context.currentTime, 0.11, 0.038);
     playTone(context, tone, 1220, context.currentTime + 0.055, 0.12, 0.032);
+    return;
+  }
+
+  if (tone === "sabotage") {
+    playTone(context, tone, FREQUENCIES.sabotage, context.currentTime, 0.07, 0.026);
+    playTone(context, tone, 260, context.currentTime + 0.045, 0.08, 0.02);
     return;
   }
 

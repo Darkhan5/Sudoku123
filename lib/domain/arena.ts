@@ -14,6 +14,7 @@ export interface SabotageAbility {
 export interface ArenaProgressInput {
   board: number[][];
   given: boolean[][];
+  solution?: number[][];
 }
 
 export interface RoomParticipant {
@@ -105,17 +106,17 @@ export const SABOTAGE_ABILITIES: SabotageAbility[] = [
   }
 ];
 
-export function calculateBoardProgress({ board, given }: ArenaProgressInput): number {
+export function calculateBoardProgress({ board, given, solution }: ArenaProgressInput): number {
   let editable = 0;
-  let filled = 0;
+  let solved = 0;
   for (let row = 0; row < 9; row += 1) {
     for (let col = 0; col < 9; col += 1) {
       if (given[row][col]) continue;
       editable += 1;
-      if (board[row][col] > 0) filled += 1;
+      if (solution ? board[row][col] === solution[row][col] : board[row][col] > 0) solved += 1;
     }
   }
-  return editable === 0 ? 100 : Math.round((filled / editable) * 100);
+  return editable === 0 ? 100 : Math.round((solved / editable) * 100);
 }
 
 export function pvpXpReward(won: boolean, winStreak: number): number {

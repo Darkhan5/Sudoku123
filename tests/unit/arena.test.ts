@@ -17,11 +17,12 @@ describe("arena rules", () => {
     assert.ok(SABOTAGE_ABILITIES.every((ability) => ability.cooldown > 0 && ability.duration > 0));
   });
 
-  it("calculates board progress from editable filled cells", () => {
+  it("calculates board progress from editable correct cells", () => {
     const board = Array.from({ length: 9 }, () => Array.from({ length: 9 }, () => 0));
+    const solution = Array.from({ length: 9 }, () => Array.from({ length: 9 }, () => 9));
     board[0][0] = 1;
-    board[0][1] = 2;
-    assert.equal(calculateBoardProgress({ board, given }), 2);
+    board[0][1] = 9;
+    assert.equal(calculateBoardProgress({ board, given, solution }), 1);
   });
 
   it("rewards PvP wins with more XP than losses", () => {

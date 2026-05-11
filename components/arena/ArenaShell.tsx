@@ -207,7 +207,7 @@ export function ArenaShell() {
 
   const siteOrigin = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? (typeof window === "undefined" ? "" : window.location.origin);
   const inviteLink = `${siteOrigin || "https://sudoku.app"}/pvp/${code}`;
-  const playerProgress = calculateBoardProgress({ board, given: puzzle.given });
+  const playerProgress = calculateBoardProgress({ board, given: puzzle.given, solution: puzzle.solution });
   const friend = role === "host" ? room?.guest : room?.host;
   const friendConnected = Boolean(friend);
   const selfReady = role === "host" ? room?.hostReady ?? false : room?.guestReady ?? false;
@@ -609,6 +609,50 @@ export function ArenaShell() {
     playFeedback(settings, "tap");
   }
 
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      const target = event.target as HTMLElement | null;
+      if (target && ["INPUT", "SELECT", "TEXTAREA"].includes(target.tagName)) return;
+      if (matchState !== "playing") return;
+
+      if (/^[1-9]$/.test(event.key)) {
+        event.preventDefault();
+        placeNumber(Number(event.key));
+        return;
+      }
+
+      if (event.key === "Backspace" || event.key === "Delete" || event.key === "0") {
+        event.preventDefault();
+        eraseSelected();
+        return;
+      }
+
+      if (event.key === "Escape") {
+        setSelected(null);
+        return;
+      }
+
+      if (!selected) return;
+      const deltas: Record<string, CellPosition> = {
+        ArrowUp: { row: -1, col: 0 },
+        ArrowDown: { row: 1, col: 0 },
+        ArrowLeft: { row: 0, col: -1 },
+        ArrowRight: { row: 0, col: 1 }
+      };
+      const delta = deltas[event.key];
+      if (delta) {
+        event.preventDefault();
+        setSelected({
+          row: Math.max(0, Math.min(8, selected.row + delta.row)),
+          col: Math.max(0, Math.min(8, selected.col + delta.col))
+        });
+      }
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [eraseSelected, matchState, placeNumber, selected]);
+
   function rematch() {
     if (!room) return;
     const nextSeed = `pvp:${code}:${Date.now()}`;
@@ -651,9 +695,8 @@ export function ArenaShell() {
 
       {matchState === "lobby" ? (
         <section className="arena-scoreboard">
-          <div>
-            <span>Комната</span>
-            <strong>Ещё не создана</strong>
+          <div className="arena-status-stack">
+            <strong>Комната пока не создана</strong>
             <small>После создания появится уникальная ссылка. Никто не подключится автоматически.</small>
           </div>
           <button type="button" className="btn-primary" onClick={createLobby}>
@@ -767,9 +810,8 @@ export function ArenaShell() {
             />
 
             <section className="arena-energy-panel">
-              <div>
-                <span>Состояние матча</span>
-                <strong>{combo > 1 ? `Комбо x${combo}` : "Чистая гонка"}</strong>
+              <div className="arena-status-stack">
+                <strong>{combo > 1 ? `Матч: комбо x${combo}` : "Матч: чистая гонка"}</strong>
               </div>
               <p>{status}</p>
             </section>
