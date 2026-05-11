@@ -3,8 +3,8 @@ import { getPremiumExperiencePacks } from "./experiencePacks";
 
 export interface SubscriptionPlan {
   id: Extract<Plan, "sudoku-pass">;
-  name: "Sudoku Pass";
-  priceMonthly: "2 500 tg/month";
+  name: string;
+  priceMonthly: string;
   features: string[];
 }
 
@@ -19,14 +19,14 @@ export const FREE_COACH_LIMIT = 3;
 
 export const SUDOKU_PASS_PLAN: SubscriptionPlan = {
   id: "sudoku-pass",
-  name: "Sudoku Pass",
-  priceMonthly: "2 500 tg/month",
+  name: "Судоку Пасс",
+  priceMonthly: "2 500 тг/месяц",
   features: [
-    "30-day season progression",
-    "Premium reward track",
-    "Unlimited AI hints during the active season",
-    "Cyber Grid and Library Ink Experience Packs",
-    "Premium ornaments, titles, and PvP effects"
+    "30-дневный сезон прогресса",
+    "Премиум-трек наград",
+    "Безлимитные подсказки AI Coach на сезон",
+    "Темы «Кибер-сетка» и «Библиотечные чернила»",
+    "Премиум-орнаменты, титулы и эффекты PvP"
   ]
 };
 

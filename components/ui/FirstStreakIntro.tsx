@@ -29,7 +29,7 @@ export function FirstStreakIntro({ open, onDone }: FirstStreakIntroProps) {
     <div className="first-streak-intro" role="status" aria-live="polite">
       <div className="first-streak-orbit">
         <span className="streak-flame-icon streak-flame-icon-xl first-streak-flame" aria-hidden />
-        <strong>1 Day Streak!</strong>
+        <strong>Серия: 1 день</strong>
       </div>
     </div>
   );

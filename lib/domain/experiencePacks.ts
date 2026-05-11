@@ -19,8 +19,8 @@ export interface ExperiencePack {
 export const EXPERIENCE_PACKS: Record<ThemeName, ExperiencePack> = {
   standard: {
     id: "standard",
-    name: "Standard",
-    description: "Clean competitive board with neutral motion.",
+    name: "Стандарт",
+    description: "Чистое соревновательное поле без лишних эффектов.",
     access: "free",
     layers: {
       board: "classic-white",
@@ -34,8 +34,8 @@ export const EXPERIENCE_PACKS: Record<ThemeName, ExperiencePack> = {
   },
   "diamond-white": {
     id: "diamond-white",
-    name: "White Board",
-    description: "Bright premium board with crisp contrast.",
+    name: "Белое поле",
+    description: "Светлое премиум-поле с четким контрастом.",
     access: "sudoku-pass",
     layers: {
       board: "white-premium",
@@ -49,8 +49,8 @@ export const EXPERIENCE_PACKS: Record<ThemeName, ExperiencePack> = {
   },
   "diamond-black": {
     id: "diamond-black",
-    name: "Black Board",
-    description: "Dark high-contrast board for focused play.",
+    name: "Черное поле",
+    description: "Темное контрастное поле для спокойной концентрации.",
     access: "sudoku-pass",
     layers: {
       board: "black-premium",
@@ -64,8 +64,8 @@ export const EXPERIENCE_PACKS: Record<ThemeName, ExperiencePack> = {
   },
   "diamond-felt": {
     id: "diamond-felt",
-    name: "Felt Board",
-    description: "Warm tactile board with muted premium tones.",
+    name: "Фетровое поле",
+    description: "Теплое поле с мягкими премиум-тонами.",
     access: "sudoku-pass",
     layers: {
       board: "felt",
@@ -79,8 +79,8 @@ export const EXPERIENCE_PACKS: Record<ThemeName, ExperiencePack> = {
   },
   "cyber-grid": {
     id: "cyber-grid",
-    name: "Cyber Grid",
-    description: "Minimal dark sci-fi atmosphere with scan fills, distant particles, and quiet electric UI sounds.",
+    name: "Кибер-сетка",
+    description: "Темная sci-fi атмосфера со сканированием клеток и электрическим акцентом.",
     access: "sudoku-pass",
     layers: {
       board: "dark-grid",
@@ -94,8 +94,8 @@ export const EXPERIENCE_PACKS: Record<ThemeName, ExperiencePack> = {
   },
   "library-ink": {
     id: "library-ink",
-    name: "Library Ink",
-    description: "Warm old-library ambience with paper texture, ink spread fills, and soft page-touch sounds.",
+    name: "Библиотечные чернила",
+    description: "Теплая библиотечная атмосфера с бумажной текстурой и чернильной анимацией.",
     access: "sudoku-pass",
     layers: {
       board: "paper-ink",

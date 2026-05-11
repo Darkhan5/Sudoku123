@@ -12,9 +12,9 @@ import {
 describe("subscription access", () => {
   it("exposes Sudoku Pass as the premium product", () => {
     assert.equal(SUDOKU_PASS_PLAN.id, "sudoku-pass");
-    assert.equal(SUDOKU_PASS_PLAN.name, "Sudoku Pass");
-    assert.equal(SUDOKU_PASS_PLAN.priceMonthly, "2 500 tg/month");
-    assert.ok(SUDOKU_PASS_PLAN.features.some((feature) => feature.includes("Premium reward track")));
+    assert.equal(SUDOKU_PASS_PLAN.name, "Судоку Пасс");
+    assert.equal(SUDOKU_PASS_PLAN.priceMonthly, "2 500 тг/месяц");
+    assert.ok(SUDOKU_PASS_PLAN.features.some((feature) => feature.includes("Премиум-трек")));
   });
 
   it("gives Sudoku Pass users unlimited AI Coach access", () => {

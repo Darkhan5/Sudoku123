@@ -89,7 +89,7 @@ export function Board({
           );
         })
       )}
-      {complete ? <span className="board-solved-label">Puzzle Solved</span> : null}
+      {complete ? <span className="board-solved-label">Решено</span> : null}
     </div>
   );
 }

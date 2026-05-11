@@ -41,7 +41,7 @@ export function StreakBadge() {
         className={`inline-flex min-h-11 items-center gap-1.5 rounded-full border border-amber-200 bg-white px-3 text-sm font-bold text-slate-900 shadow-sm ${
           isMilestone ? "streak-milestone" : ""
         }`}
-        title={isMilestone ? `${streak}-day streak!` : "Daily streak"}
+        title={isMilestone ? `${streak} дней серии!` : "Ежедневная серия"}
         onClick={() => setOpen(true)}
       >
         <span className="streak-flame-icon" aria-hidden />

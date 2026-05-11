@@ -132,7 +132,7 @@ export function DiamondModal({ open, onClose }: DiamondModalProps) {
             <div className="min-w-0">
               <p className="text-sm font-semibold text-cyan-200">Судоку</p>
               <h2 className="mt-1 text-3xl font-black">Магазин алмазов</h2>
-              <p className="mt-2 text-sm text-slate-300">Sudoku Pass and diamond packs open through Stripe Checkout.</p>
+              <p className="mt-2 text-sm text-slate-300">Судоку Пасс и наборы алмазов открываются через Stripe Checkout.</p>
             </div>
           </div>
         </div>
@@ -183,7 +183,7 @@ export function DiamondModal({ open, onClose }: DiamondModalProps) {
 
           <aside className="diamond-membership-panel">
             <div className="flex items-center justify-between gap-3">
-              <p className="text-xs font-black uppercase text-cyan-700">Sudoku Pass</p>
+              <p className="text-xs font-black uppercase text-cyan-700">Судоку Пасс</p>
               <DiamondGlyph className="diamond-glyph-lg" />
             </div>
             <h3>{SUDOKU_PASS_PLAN.name}</h3>
@@ -194,7 +194,7 @@ export function DiamondModal({ open, onClose }: DiamondModalProps) {
               ))}
             </ul>
             <button type="button" className="btn-primary mt-5 w-full" onClick={startSubscriptionCheckout} disabled={checkoutLoading !== null}>
-              {checkoutLoading === "sudoku_pass" ? "Opening Stripe..." : "Buy Sudoku Pass"}
+              {checkoutLoading === "sudoku_pass" ? "Открываем Stripe..." : "Купить Судоку Пасс"}
             </button>
           </aside>
         </div>

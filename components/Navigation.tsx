@@ -6,12 +6,12 @@ import { DiamondCounter } from "@/components/ui/DiamondCounter";
 import { StreakBadge } from "@/components/ui/StreakBadge";
 
 const NAV_ITEMS = [
-  { href: "/", label: "Today", icon: "today" },
-  { href: "/play", label: "Play", icon: "play" },
-  { href: "/pass", label: "Pass", icon: "pass" },
-  { href: "/arena", label: "PvP", icon: "pvp" },
-  { href: "/leaderboard", label: "Rating", icon: "leaderboard" },
-  { href: "/profile", label: "Profile", icon: "profile" }
+  { href: "/", label: "Сегодня", icon: "today" },
+  { href: "/play", label: "Играть", icon: "play" },
+  { href: "/pass", label: "Пасс", icon: "pass" },
+  { href: "/arena", label: "Арена", icon: "pvp" },
+  { href: "/leaderboard", label: "Рейтинг", icon: "leaderboard" },
+  { href: "/profile", label: "Профиль", icon: "profile" }
 ];
 
 function NavIcon({ name }: { name: string }) {

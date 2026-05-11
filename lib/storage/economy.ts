@@ -5,6 +5,7 @@ import {
   type DailyLoginClaim,
   type DailyLoginRewardState
 } from "@/lib/domain/dailyLogin";
+import { normalizePlayedDates } from "@/lib/domain/streak";
 import { safeJsonParse, todayIso } from "@/lib/utils/date";
 
 interface EconomyDay {
@@ -92,6 +93,9 @@ export function claimDailyLoginReward(date = todayIso()): DailyLoginClaim | null
 
   updatePlayer({
     diamonds: player.diamonds + claim.reward.diamonds,
+    streak: claim.state.streak,
+    lastPlayedDate: claim.state.lastClaimedDate,
+    playedDates: normalizePlayedDates([...(player.playedDates ?? []), claim.state.lastClaimedDate]),
     ownedNumberPacks: nextOwnedNumberPacks
   });
   emitLoginRewardUpdate(claim);

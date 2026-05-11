@@ -137,6 +137,41 @@ function syncPlayerPlanWithPass(state: SudokuPassState): void {
   if (player.plan === "free" && state.premiumActive) updatePlayer({ plan: "sudoku-pass" });
 }
 
+function grantPassRewards(state: SudokuPassState, rewards: PassReward[]): PassReward[] {
+  if (!rewards.length) return [];
+
+  const player = getPlayer();
+  const ownedNumberPacks = new Set<NumberStyle>(player?.ownedNumberPacks ?? ["classic"]);
+  let diamonds = player?.diamonds ?? 0;
+  let title = player?.title;
+  const seasonBadges = new Set(player?.seasonBadges ?? []);
+
+  for (const reward of rewards) {
+    if (reward.kind === "diamonds") diamonds += reward.diamonds ?? 0;
+    if (reward.kind === "number_style" && reward.numberStyle) ownedNumberPacks.add(reward.numberStyle);
+    if (reward.kind === "title") title = reward.title.replace(/^Титул:\s*/, "").replace(/\s*title$/i, "");
+    if (["board_style", "animated_cosmetic", "kazakh_ornament", "pvp_effect", "xp_boost", "theme"].includes(reward.kind)) {
+      seasonBadges.add(reward.title);
+    }
+  }
+
+  if (player) {
+    updatePlayer({
+      diamonds,
+      title,
+      ownedNumberPacks: Array.from(ownedNumberPacks),
+      seasonBadges: Array.from(seasonBadges)
+    });
+  }
+
+  writeState({
+    ...state,
+    claimedRewardIds: Array.from(new Set([...state.claimedRewardIds, ...rewards.map((reward) => reward.id)]))
+  });
+
+  return rewards;
+}
+
 function completeTask(state: SudokuPassState, taskId: PassTaskId): SudokuPassState {
   const task = PASS_TASKS.find((item) => item.id === taskId);
   if (!task) return state;
@@ -248,37 +283,15 @@ export function canUseExperiencePack(theme: ThemeName): boolean {
 export function claimUnlockedPassRewards(): PassReward[] {
   const state = getSudokuPassState();
   const rewards = getUnlockedPassRewards(state.xp, state.premiumActive).filter((reward) => !state.claimedRewardIds.includes(reward.id));
-  if (!rewards.length) return [];
+  return grantPassRewards(state, rewards);
+}
 
-  const player = getPlayer();
-  const ownedNumberPacks = new Set<NumberStyle>(player?.ownedNumberPacks ?? ["classic"]);
-  let diamonds = player?.diamonds ?? 0;
-  let title = player?.title;
-  const seasonBadges = new Set(player?.seasonBadges ?? []);
+export function claimPassReward(rewardId: string): PassReward | null {
+  const state = getSudokuPassState();
+  if (state.claimedRewardIds.includes(rewardId)) return null;
 
-  for (const reward of rewards) {
-    if (reward.kind === "diamonds") diamonds += reward.diamonds ?? 0;
-    if (reward.kind === "number_style" && reward.numberStyle) ownedNumberPacks.add(reward.numberStyle);
-    if (reward.kind === "title") title = reward.title.replace(" title", "");
-    if (["board_style", "animated_cosmetic", "kazakh_ornament", "pvp_effect", "xp_boost", "theme"].includes(reward.kind)) {
-      seasonBadges.add(reward.title);
-    }
-  }
-
-  if (player) {
-    updatePlayer({
-      diamonds,
-      title,
-      ownedNumberPacks: Array.from(ownedNumberPacks),
-      seasonBadges: Array.from(seasonBadges)
-    });
-  }
-
-  writeState({
-    ...state,
-    claimedRewardIds: Array.from(new Set([...state.claimedRewardIds, ...rewards.map((reward) => reward.id)]))
-  });
-  return rewards;
+  const reward = getUnlockedPassRewards(state.xp, state.premiumActive).find((item) => item.id === rewardId);
+  return grantPassRewards(state, reward ? [reward] : [])[0] ?? null;
 }
 
 export function taskDefinitions() {

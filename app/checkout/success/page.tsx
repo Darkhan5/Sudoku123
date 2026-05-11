@@ -110,11 +110,11 @@ function CheckoutSuccessContent() {
           if (!cancelled) {
             setState("complete");
             setKind("diamond_pack");
-            setMessage(alreadyProcessedLocally ? "This purchase was already credited." : `Credited ${payload.diamonds.toLocaleString("ru-RU")} diamonds.`);
+            setMessage(alreadyProcessedLocally ? "Покупка уже была начислена." : `Начислено алмазов: ${payload.diamonds.toLocaleString("ru-RU")}.`);
             setDetail(
               payload.fulfilled
-                ? "Purchase was saved on the server and synced to your local profile."
-                : payload.fulfillmentReason ?? "Payment succeeded; server fulfillment is waiting for the webhook."
+                ? "Покупка сохранена на сервере и синхронизирована с профилем."
+                : payload.fulfillmentReason ?? "Оплата прошла, серверное начисление ожидает webhook."
             );
           }
           return;
@@ -133,11 +133,11 @@ function CheckoutSuccessContent() {
           if (!cancelled) {
             setState("complete");
             setKind("sudoku_pass");
-            setMessage("Sudoku Pass activated.");
+            setMessage("Судоку Пасс активирован.");
             setDetail(
               payload.fulfilled
-                ? `Premium track is active for ${payload.seasonId ?? "the current season"}.`
-                : payload.fulfillmentReason ?? "Payment succeeded; server fulfillment is waiting for the webhook."
+                ? `Премиум-трек активен для сезона ${payload.seasonId ?? "сейчас"}.`
+                : payload.fulfillmentReason ?? "Оплата прошла, серверное начисление ожидает webhook."
             );
           }
           return;
@@ -145,14 +145,14 @@ function CheckoutSuccessContent() {
 
         if (!cancelled) {
           setState("error");
-          setMessage("Payment succeeded, but the product was not recognized.");
-          setDetail(payload.fulfillmentReason ?? "Check Stripe Checkout metadata.");
+          setMessage("Оплата прошла, но продукт не распознан.");
+          setDetail(payload.fulfillmentReason ?? "Проверь metadata в Stripe Checkout.");
         }
       } catch (error) {
         if (!cancelled) {
           setState("error");
-          setMessage(error instanceof Error ? error.message : "Could not verify the Stripe session.");
-          setDetail("Check the dev server and Stripe webhook.");
+          setMessage(error instanceof Error ? error.message : "Не удалось проверить Stripe-сессию.");
+          setDetail("Проверь dev-сервер и Stripe webhook.");
         }
       }
     }
@@ -164,8 +164,8 @@ function CheckoutSuccessContent() {
     };
   }, [sessionId]);
 
-  const title = state === "checking" ? "Checking Payment" : state === "complete" ? "Purchase Complete" : "Purchase Not Activated";
-  const badge = state === "complete" ? (kind === "sudoku_pass" ? "Sudoku Pass" : "Diamonds") : "Stripe Checkout";
+  const title = state === "checking" ? "Проверяем оплату" : state === "complete" ? "Покупка готова" : "Покупка не активирована";
+  const badge = state === "complete" ? (kind === "sudoku_pass" ? "Судоку Пасс" : "Алмазы") : "Stripe Checkout";
 
   return (
     <main className="page-shell">
@@ -179,10 +179,10 @@ function CheckoutSuccessContent() {
         {detail ? <p className="mx-auto mt-2 max-w-xl text-xs font-bold leading-5 text-slate-500">{detail}</p> : null}
         <div className="mt-5 flex flex-wrap justify-center gap-2">
           <Link href="/pass" className="btn-primary">
-            Sudoku Pass
+            Судоку Пасс
           </Link>
           <Link href="/play" className="btn-secondary">
-            Play
+            Играть
           </Link>
         </div>
       </section>
@@ -192,7 +192,7 @@ function CheckoutSuccessContent() {
 
 export default function CheckoutSuccessPage() {
   return (
-    <Suspense fallback={<main className="page-shell">Checking payment...</main>}>
+    <Suspense fallback={<main className="page-shell">Проверяем оплату...</main>}>
       <CheckoutSuccessContent />
     </Suspense>
   );
